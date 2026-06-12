@@ -10,9 +10,16 @@
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "test:groups": "node --env-file=.env scripts/test-groups.mjs",
+    "test:split": "node scripts/test-split.ts",
+    "test:dashboard": "node --env-file=.env scripts/test-dashboard.mjs",
+    "test:receipts": "node --env-file=.env scripts/test-receipts.mjs",
+    "gen:icons": "node scripts/generate-icons.mjs",
+    "test:ratelimit": "node scripts/test-ratelimit.mjs"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "0.104.1",
     "@hookform/resolvers": "^3.9.0",
     "@prisma/client": "^5.20.0",
     "@radix-ui/react-label": "^2.1.0",
@@ -23,9 +30,13 @@
     "lucide-react": "^0.441.0",
     "next": "14.2.13",
     "next-auth": "5.0.0-beta.20",
+    "next-pwa": "5.6.0",
+    "next-themes": "0.4.6",
     "react": "^18",
     "react-dom": "^18",
     "react-hook-form": "^7.53.0",
+    "recharts": "3.8.1",
+    "sonner": "2.0.7",
     "tailwind-merge": "^2.5.2",
     "tailwindcss-animate": "^1.0.7",
     "zod": "^3.23.8"

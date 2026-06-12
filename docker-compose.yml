@@ -1,0 +1,43 @@
+# Local/production-like stack: Postgres + the app. The app applies migrations
+# (`prisma migrate deploy`) on startup, then serves on :3000.
+#
+#   NEXTAUTH_SECRET=$(openssl rand -base64 32) docker compose up --build
+#
+# Put a TLS-terminating reverse proxy (nginx/traefik/caddy) in front in prod and
+# set NEXTAUTH_URL to the public https URL.
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: fairshare
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-fairshare}
+      POSTGRES_DB: fairshare
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fairshare"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://fairshare:${POSTGRES_PASSWORD:-fairshare}@db:5432/fairshare
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?set NEXTAUTH_SECRET (openssl rand -base64 32)}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      UPLOAD_DIR: /data/uploads
+      APP_VERSION: ${APP_VERSION:-docker}
+    ports:
+      - "3000:3000"
+    volumes:
+      - uploads:/data
+
+volumes:
+  db-data:
+  uploads:

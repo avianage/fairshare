@@ -59,7 +59,7 @@ const strengthConfig: Record<
   strong: {
     label: "Strong",
     barClass: "bg-green-500",
-    textClass: "text-green-600",
+    textClass: "text-success",
     width: "w-full",
   },
 }
@@ -70,7 +70,7 @@ function PasswordStrengthBar({ password }: { password: string }) {
   const { label, barClass, textClass, width } = strengthConfig[strength]
   return (
     <div className="space-y-1">
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-200">
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
         <div className={`h-full rounded-full transition-all duration-300 ${barClass} ${width}`} />
       </div>
       <p className={`text-xs ${textClass}`}>Password strength: {label}</p>
@@ -78,7 +78,11 @@ function PasswordStrengthBar({ password }: { password: string }) {
   )
 }
 
-export function RegisterForm() {
+export function RegisterForm({
+  callbackUrl = "/dashboard",
+}: {
+  callbackUrl?: string
+}) {
   const router = useRouter()
   const [serverError, setServerError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -117,12 +121,13 @@ export function RegisterForm() {
     })
 
     if (signInResult?.error) {
-      // Account created but sign-in failed — send them to login
-      router.push("/login")
+      // Account created but sign-in failed — send them to login, preserving
+      // where they were headed (e.g. an invite link).
+      router.push(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`)
       return
     }
 
-    router.push("/dashboard")
+    router.push(callbackUrl)
     router.refresh()
   }
 
@@ -136,7 +141,7 @@ export function RegisterForm() {
       <form onSubmit={handleSubmit(onSubmit)}>
         <CardContent className="space-y-4">
           {serverError && (
-            <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
               {serverError}
             </div>
           )}
@@ -152,7 +157,7 @@ export function RegisterForm() {
               {...register("name")}
             />
             {errors.name && (
-              <p className="text-xs text-red-500">{errors.name.message}</p>
+              <p className="text-xs text-destructive">{errors.name.message}</p>
             )}
           </div>
 
@@ -167,7 +172,7 @@ export function RegisterForm() {
               {...register("email")}
             />
             {errors.email && (
-              <p className="text-xs text-red-500">{errors.email.message}</p>
+              <p className="text-xs text-destructive">{errors.email.message}</p>
             )}
           </div>
 
@@ -181,7 +186,7 @@ export function RegisterForm() {
               {...register("password")}
             />
             {errors.password ? (
-              <p className="text-xs text-red-500">{errors.password.message}</p>
+              <p className="text-xs text-destructive">{errors.password.message}</p>
             ) : (
               <PasswordStrengthBar password={passwordValue} />
             )}
@@ -194,7 +199,10 @@ export function RegisterForm() {
           </Button>
           <p className="text-sm text-muted-foreground">
             Already have an account?{" "}
-            <Link href="/login" className="text-primary hover:underline">
+            <Link
+              href={`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`}
+              className="text-primary hover:underline"
+            >
               Sign in
             </Link>
           </p>

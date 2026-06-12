@@ -1,0 +1,38 @@
+import { redirect } from "next/navigation"
+import { auth } from "@/lib/auth"
+import { prisma } from "@/lib/prisma"
+import { ProfileForm } from "@/components/profile/ProfileForm"
+import { PasswordForm } from "@/components/profile/PasswordForm"
+
+export const metadata = { title: "Profile · Fairshare" }
+
+export default async function ProfilePage() {
+  const session = await auth()
+  if (!session?.user?.id) redirect("/login")
+
+  const user = await prisma.user.findUnique({
+    where: { id: session.user.id },
+    select: { id: true, name: true, email: true, createdAt: true }, // never passwordHash
+  })
+
+  if (!user) redirect("/login")
+
+  return (
+    <div className="mx-auto max-w-2xl space-y-8">
+      <div>
+        <h1 className="text-2xl font-semibold">Profile</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Manage your account details and password.
+        </p>
+      </div>
+
+      <ProfileForm
+        defaultName={user.name}
+        email={user.email}
+        memberSince={user.createdAt.toISOString()}
+      />
+
+      <PasswordForm />
+    </div>
+  )
+}

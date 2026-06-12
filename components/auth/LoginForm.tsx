@@ -68,7 +68,7 @@ export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
       <form onSubmit={handleSubmit(onSubmit)}>
         <CardContent className="space-y-4">
           {authError && (
-            <div className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-600">
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
               {authError}
             </div>
           )}
@@ -84,7 +84,7 @@ export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
               {...register("email")}
             />
             {errors.email && (
-              <p className="text-xs text-red-500">{errors.email.message}</p>
+              <p className="text-xs text-destructive">{errors.email.message}</p>
             )}
           </div>
 
@@ -98,7 +98,7 @@ export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
               {...register("password")}
             />
             {errors.password && (
-              <p className="text-xs text-red-500">{errors.password.message}</p>
+              <p className="text-xs text-destructive">{errors.password.message}</p>
             )}
           </div>
         </CardContent>
@@ -109,7 +109,10 @@ export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
           </Button>
           <p className="text-sm text-muted-foreground">
             Don&apos;t have an account?{" "}
-            <Link href="/register" className="text-primary hover:underline">
+            <Link
+              href={`/register?callbackUrl=${encodeURIComponent(callbackUrl)}`}
+              className="text-primary hover:underline"
+            >
               Create one
             </Link>
           </p>

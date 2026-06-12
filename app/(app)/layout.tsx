@@ -1,6 +1,10 @@
 import { redirect } from "next/navigation"
 import Link from "next/link"
-import { auth, signOut } from "@/lib/auth"
+import { auth } from "@/lib/auth"
+import { SignOutButton } from "@/components/SignOutButton"
+import { ThemeToggle } from "@/components/ThemeToggle"
+import { SidebarNav, MobileNav } from "@/components/AppNav"
+import { AddExpenseFAB } from "@/components/fab/AddExpenseFAB"
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -9,58 +13,77 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     redirect("/login")
   }
 
+  const initial = (session.user.name ?? "?").charAt(0).toUpperCase()
+
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
-      <aside className="flex w-60 flex-col border-r bg-white">
-        <div className="flex h-14 items-center border-b px-5">
-          <span className="text-lg font-semibold text-blue-600">Fairshare</span>
+    <div className="flex h-screen bg-background">
+      {/* Sidebar — hidden on mobile, where a top nav row takes over */}
+      <aside className="hidden w-64 flex-col border-r bg-card md:flex">
+        <div className="flex h-16 items-center gap-2 border-b px-6">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/icon.png"
+            alt="Fairshare Logo"
+            className="h-8 w-8 rounded-lg object-contain"
+          />
+          <span className="text-lg font-semibold tracking-tight">Fairshare</span>
         </div>
-        <nav className="flex-1 space-y-0.5 p-3 text-sm">
-          <Link
-            href="/dashboard"
-            className="flex items-center rounded-md px-3 py-2 text-gray-700 hover:bg-gray-100"
-          >
-            Dashboard
-          </Link>
-          <Link
-            href="/groups"
-            className="flex items-center rounded-md px-3 py-2 text-gray-700 hover:bg-gray-100"
-          >
-            Groups
-          </Link>
+        <SidebarNav />
+        <div className="border-t p-3">
           <Link
             href="/profile"
-            className="flex items-center rounded-md px-3 py-2 text-gray-700 hover:bg-gray-100"
+            className="flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-accent/60"
           >
-            Profile
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+              {initial}
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-sm font-medium">
+                {session.user.name}
+              </span>
+              <span className="block truncate text-xs text-muted-foreground">
+                {session.user.email}
+              </span>
+            </span>
           </Link>
-        </nav>
+        </div>
       </aside>
 
       {/* Main column */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        {/* Top nav */}
-        <header className="flex h-14 items-center justify-end gap-4 border-b bg-white px-6">
-          <span className="text-sm text-gray-600">{session.user.name}</span>
-          <form
-            action={async () => {
-              "use server"
-              await signOut({ redirectTo: "/login" })
-            }}
-          >
-            <button
-              type="submit"
-              className="text-sm text-gray-500 hover:text-gray-800"
-            >
-              Sign out
-            </button>
-          </form>
+        {/* Top bar */}
+        <header className="flex h-16 shrink-0 items-center justify-between gap-3 border-b bg-card/80 px-4 backdrop-blur supports-[backdrop-filter]:bg-card/60 sm:px-6">
+          <span className="flex items-center gap-2 text-lg font-semibold md:hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/icon.png"
+              alt="Fairshare Logo"
+              className="h-7 w-7 rounded-lg object-contain"
+            />
+            Fairshare
+          </span>
+          <div className="ml-auto flex items-center gap-2 sm:gap-3">
+            <span className="hidden text-sm text-muted-foreground sm:inline">
+              {session.user.name}
+            </span>
+            <ThemeToggle />
+            <SignOutButton />
+          </div>
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto overflow-x-hidden px-4 pt-4 pb-[calc(5rem+env(safe-area-inset-bottom))] sm:px-6 sm:pt-6 sm:pb-[calc(5rem+env(safe-area-inset-bottom))] md:p-6 lg:p-8">
+          <div className="mx-auto w-full max-w-5xl">{children}</div>
+        </main>
+
+        {/* Mobile nav row */}
+        <MobileNav />
       </div>
+
+      {/* Persistent floating add-expense button (authenticated pages only) */}
+      <AddExpenseFAB
+        currentUser={{ id: session.user.id, name: session.user.name ?? "You" }}
+      />
     </div>
   )
 }

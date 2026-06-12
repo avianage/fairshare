@@ -7,6 +7,31 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+enum Role {
+  ADMIN
+  MEMBER
+}
+
+enum SplitType {
+  EQUAL
+  EXACT
+  PERCENTAGE
+  SHARES
+}
+
+enum ExpenseCategory {
+  FOOD
+  TRANSPORT
+  ACCOMMODATION
+  ENTERTAINMENT
+  SHOPPING
+  GROCERIES
+  UTILITIES
+  HEALTH
+  TRAVEL
+  OTHER
+}
+
 model User {
   id           String   @id @default(cuid())
   name         String
@@ -15,4 +40,134 @@ model User {
   avatar       String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  memberships         GroupMember[]
+  invitesSent         GroupInvite[]       @relation("InvitedBy")
+  expensesPaid        Expense[]           @relation("ExpensePayer")
+  expenseSplits       ExpenseSplit[]      @relation("ExpenseSplitUser")
+  settlementsSent     Settlement[]        @relation("SettlementSender")
+  settlementsRecvd    Settlement[]        @relation("SettlementReceiver")
+  directParticipation DirectParticipant[] @relation("DirectParticipantUser")
+}
+
+model Group {
+  id          String    @id @default(cuid())
+  name        String
+  emoji       String?
+  description String?
+  currency    String    @default("INR")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  members     GroupMember[]
+  invites     GroupInvite[]
+  expenses    Expense[]
+  settlements Settlement[]
+}
+
+model GroupMember {
+  id       String   @id @default(cuid())
+  userId   String
+  groupId  String
+  role     Role     @default(MEMBER)
+  joinedAt DateTime @default(now())
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, groupId])
+  @@index([groupId])
+}
+
+model GroupInvite {
+  id          String    @id @default(cuid())
+  token       String    @unique @default(cuid())
+  groupId     String
+  invitedById String
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  group     Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  invitedBy User  @relation("InvitedBy", fields: [invitedById], references: [id])
+
+  @@index([groupId])
+  @@index([token])
+}
+
+model Expense {
+  id          String          @id @default(cuid())
+  // Nullable: a null groupId marks a *direct* (non-group) expense whose
+  // members live in DirectParticipant instead of GroupMember.
+  groupId     String?
+  payerId     String
+  description String
+  amount      Decimal         @db.Decimal(12, 2)
+  category    ExpenseCategory @default(OTHER)
+  splitType   SplitType       @default(EQUAL)
+  notes       String?
+  receiptUrl  String?
+  date        DateTime        @default(now())
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  deletedAt   DateTime?
+
+  group        Group?              @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  payer        User                @relation("ExpensePayer", fields: [payerId], references: [id])
+  splits       ExpenseSplit[]
+  participants DirectParticipant[]
+
+  // Most reads filter by group and exclude soft-deleted rows, sorted by date.
+  @@index([groupId, deletedAt, date])
+  @@index([payerId])
+  // Direct-expense reads filter on (null) groupId + soft-delete, sorted by date.
+  @@index([deletedAt, date])
+}
+
+// Participants of a *direct* (non-group) expense. Group expenses derive member
+// identity from GroupMember; direct expenses derive it from these rows.
+model DirectParticipant {
+  id        String @id @default(cuid())
+  expenseId String
+  userId    String
+
+  expense Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  user    User    @relation("DirectParticipantUser", fields: [userId], references: [id])
+
+  @@unique([expenseId, userId])
+  @@index([userId])
+}
+
+model ExpenseSplit {
+  id        String  @id @default(cuid())
+  expenseId String
+  userId    String
+  amount    Decimal @db.Decimal(12, 2)
+
+  expense Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  user    User    @relation("ExpenseSplitUser", fields: [userId], references: [id])
+
+  @@unique([expenseId, userId])
+  @@index([userId])
+}
+
+model Settlement {
+  id         String   @id @default(cuid())
+  // Nullable: a null groupId marks a *direct* settlement between two users that
+  // isn't tied to any group.
+  groupId    String?
+  senderId   String // the debtor who paid
+  receiverId String // the creditor who was paid
+  amount     Decimal  @db.Decimal(12, 2)
+  note       String?
+  createdAt  DateTime @default(now())
+
+  group    Group? @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  sender   User   @relation("SettlementSender", fields: [senderId], references: [id])
+  receiver User   @relation("SettlementReceiver", fields: [receiverId], references: [id])
+
+  @@index([groupId])
+  // Direct settlements are looked up by the two parties.
+  @@index([senderId, receiverId])
 }
