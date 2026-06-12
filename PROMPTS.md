@@ -1183,3 +1183,544 @@ npx eslint app/ lib/ --ext .ts,.tsx
 npm run build && echo "Build OK" || echo "Build FAILED"
 ```
 
+---
+
+## PHASE 9 — Non-Group (Direct) Expenses
+ 
+### Schema changes needed first
+ 
+```prisma
+// In prisma/schema.prisma
+ 
+model Expense {
+  // existing fields...
+  groupId     String?   // ← make nullable (was required)
+  group       Group?    @relation(fields: [groupId], references: [id])
+ 
+  // NEW: for direct expenses, track participants explicitly
+  participants DirectParticipant[]
+}
+ 
+model DirectParticipant {
+  id        String   @id @default(cuid())
+  expenseId String
+  expense   Expense  @relation(fields: [expenseId], references: [id])
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+ 
+  @@unique([expenseId, userId])
+}
+```
+ 
+Run: `prisma migrate dev --name direct-expenses`
+ 
+### The Prompt
+ 
+```
+I'm building Fairshare. I need to support direct (non-group) expenses — expenses
+between two or more users without a formal group.
+ 
+Schema change already applied:
+- Expense.groupId is now optional (nullable)
+- New DirectParticipant join table: expenseId + userId
+ 
+1. lib/splitEngine.ts — extend existing functions:
+   - buildRawDebts() already works for group expenses; extend to accept
+     direct expenses (where groupId is null) as well.
+   - The caller is responsible for passing both types together.
+ 
+2. app/api/expenses/route.ts (new file — top-level, not under groups):
+   POST /api/expenses
+   Body: {
+     description: string
+     amount: number          // in paise/cents as integer
+     payerId: string
+     participantIds: string[] // must include payerId
+     splitType: 'EQUAL' | 'EXACT' | 'PERCENTAGE' | 'SHARES'
+     values?: Record<string, number>
+     date?: string
+     note?: string
+   }
+ 
+   Validation:
+   - payerId must be in participantIds
+   - All participantIds must be valid user IDs that exist in the DB
+   - participantIds cannot be empty; minimum 2 users
+   - groupId is NOT accepted on this route
+   - Split recalculation is always server-side (never trust client values)
+ 
+   On success:
+   - Create Expense with groupId = null
+   - Create DirectParticipant rows for each participantId
+   - Create ExpenseSplit rows (same logic as group expenses)
+   - Return 201 with expense + splits
+ 
+   GET /api/expenses
+   - Returns all direct expenses where the current user is a participant
+     (either as payer or in DirectParticipant table)
+   - Include payer info, split amounts, participants list
+   - Paginate: ?page=1&limit=20
+   - Sorted by date desc
+ 
+3. app/api/expenses/[expenseId]/route.ts:
+   GET  — fetch single direct expense (must be a participant)
+   PATCH — edit (only payer or app-level; no group admin concept here)
+   DELETE — soft delete (only payer can delete)
+ 
+4. lib/directExpenses.ts:
+   export async function getDirectExpensesForUser(userId: string)
+   - Returns all expenses where groupId is null and user is a participant
+   - Joins payer, participants, splits
+ 
+   export async function computeDirectDebts(userId: string): Promise<SimplifiedDebt[]>
+   - Fetches direct expenses for user
+   - Calls buildRawDebts() + simplifyDebts()
+   - Returns net debts as { fromUserId, toUserId, amount }
+ 
+Security:
+- Never expose expenses where the current user is not a participant
+- Validate all participantIds exist in DB before creating expense
+- Use server-side split recalculation (same Zod + engine pattern as group expenses)
+- Rate limit POST /api/expenses (reuse existing rate limiter config)
+```
+ 
+### Security Checklist — Phase 9
+ 
+- [ ] `groupId: null` expenses only returned to their participants
+- [ ] `payerId` must be one of the `participantIds`
+- [ ] All `participantIds` validated against DB (no phantom users)
+- [ ] Split recomputed server-side, never from client
+- [ ] Soft-delete only; `deletedAt` checked on all queries
+- [ ] `GET /api/expenses` cannot enumerate other users' expenses
+### How to Test — Phase 9
+ 
+```bash
+# Create a direct expense between two users
+curl -X POST http://localhost:3000/api/expenses \
+  -H "Content-Type: application/json" \
+  -H "Cookie: $COOKIE" \
+  -d '{
+    "description": "Coffee",
+    "amount": 300,
+    "payerId": "USER_A",
+    "participantIds": ["USER_A", "USER_B"],
+    "splitType": "EQUAL"
+  }'
+# Expect: 201, splits = [150, 150]
+ 
+# Try to create with a fake participantId
+curl -X POST http://localhost:3000/api/expenses \
+  -H "Content-Type: application/json" \
+  -H "Cookie: $COOKIE" \
+  -d '{"description":"X","amount":100,"payerId":"USER_A","participantIds":["USER_A","FAKE_ID"],"splitType":"EQUAL"}'
+# Expect: 400
+ 
+# Try to fetch an expense where you are NOT a participant
+curl http://localhost:3000/api/expenses/SOMEONE_ELSES_EXPENSE_ID \
+  -H "Cookie: $COOKIE"
+# Expect: 404
+ 
+# Verify groupId is null in DB
+SELECT id, description, "groupId" FROM "Expense"
+WHERE "groupId" IS NULL ORDER BY "createdAt" DESC LIMIT 5;
+```
+ 
+---
+ 
+## PHASE 10 — Global "Who Owes Whom" View
+ 
+### The Prompt
+ 
+```
+I'm building Fairshare. Add a global "Who Owes Whom" page that shows net debts
+across both group expenses and direct expenses.
+ 
+1. lib/globalBalances.ts (new file):
+ 
+   export async function getGlobalDebts(userId: string): Promise<{
+     owedToYou: { userId: string; name: string; avatar: string | null; amount: number }[]
+     youOwe:    { userId: string; name: string; avatar: string | null; amount: number }[]
+     netBalance: number // positive = you are owed; negative = you owe
+   }>
+ 
+   Implementation:
+   a. Fetch all group expenses for all groups the user is in
+      (use existing group expense + settlement logic per group)
+   b. Fetch all direct expenses for the user (Phase 9)
+   c. Merge both into a single RawDebt[] array
+   d. Run simplifyDebts() on the merged array
+   e. Split result into owedToYou vs youOwe from userId's perspective
+   f. Join user names + avatars for display
+ 
+2. app/api/balances/route.ts (new file):
+   GET /api/balances
+   - Calls getGlobalDebts(session.user.id)
+   - Returns the structured result
+   - Cache with revalidate: 30 (Next.js fetch cache or unstable_cache)
+ 
+3. app/(app)/balances/page.tsx:
+   Server component — fetch from getGlobalDebts directly.
+ 
+   Layout:
+   - Hero summary: big number showing net balance
+     "You are owed ₹1,250" (green) or "You owe ₹450" (orange) or "All settled up ✓" (gray)
+   - Two sections side by side (stacked on mobile):
+     Left: "They owe you" — list of UserDebtRow (avatar, name, amount in green)
+     Right: "You owe" — list of UserDebtRow (avatar, name, amount in orange)
+   - Each UserDebtRow links to a detail page: /balances/[userId]
+   - Empty state: confetti + "All settled up!" if netBalance === 0
+ 
+4. app/(app)/balances/[userId]/page.tsx:
+   Shows ALL expenses (group + direct) between current user and the other user.
+   - List of contributing expenses with group name tag OR "Direct" tag
+   - "Settle up" button → POST /api/direct-settle (see below)
+ 
+5. app/api/direct-settle/route.ts:
+   POST — record a direct settlement between two users
+   Body: { toUserId: string; amount: number; note?: string }
+   - Creates a Settlement with groupId = null
+   - Validates amount > 0 and toUserId exists
+   - Same soft-delete-safe pattern as group settlements
+ 
+Security:
+- getGlobalDebts must only compute balances for the requesting user
+- /api/balances cannot be used to enumerate debts between other users
+- /balances/[userId] only shows expenses where current user is a participant
+```
+ 
+### Security Checklist — Phase 10
+ 
+- [ ] `getGlobalDebts()` scoped strictly to `session.user.id`
+- [ ] `/balances/[userId]` only shows shared expenses, not all of `[userId]`'s expenses
+- [ ] Direct settlements validated: `toUserId` must have an actual debt with current user
+- [ ] No global enumeration of users or balances
+### How to Test — Phase 10
+ 
+```bash
+# Check global balance endpoint
+curl http://localhost:3000/api/balances \
+  -H "Cookie: $COOKIE"
+# Expect: { owedToYou: [...], youOwe: [...], netBalance: N }
+ 
+# Verify math: sum of owedToYou - sum of youOwe should equal netBalance
+node -e "
+const d = /* paste response */;
+const owed = d.owedToYou.reduce((a,b) => a+b.amount, 0);
+const owe  = d.youOwe.reduce((a,b) => a+b.amount, 0);
+console.assert(owed - owe === d.netBalance, 'Balance mismatch');
+"
+ 
+# SQL: verify cross-group balances include all groups
+SELECT gm."groupId"
+FROM "GroupMember" gm
+WHERE gm."userId" = 'YOUR_USER_ID'
+  AND gm."groupId" NOT IN (
+    SELECT DISTINCT e."groupId"
+    FROM "Expense" e
+    WHERE e."groupId" IS NOT NULL
+  );
+-- Should only return groups with zero expenses (correct to omit)
+```
+ 
+---
+ 
+## PHASE 11 — Floating Add Expense (FAB)
+ 
+### The Prompt
+ 
+```
+I'm building Fairshare. Add a persistent floating "Add Expense" button (FAB)
+that is always visible on every page, opens a context-aware modal.
+ 
+1. components/fab/AddExpenseFAB.tsx:
+   - Fixed position: bottom-6 right-6, z-50
+   - A circular button (56px) with a "+" icon and subtle shadow
+   - On click: opens <AddExpenseModal>
+   - Rendered in app/layout.tsx so it appears on every authenticated page
+   - On mobile: slightly smaller (48px), bottom-4 right-4
+ 
+2. components/fab/AddExpenseModal.tsx:
+   A full-screen bottom sheet on mobile, centered modal on desktop.
+ 
+   Step 1 — "Add to":
+   Three option cards:
+   - 🏷️ "A Group"  → shows group selector (all groups user is in)
+   - 👤 "A Person" → shows user search input
+   - 🌐 "Anyone"   → shows multi-user search (free participants)
+ 
+   If the user navigated from a group page (/groups/[id]), pre-select that group
+   and skip Step 1 entirely (pass groupId via URL search param or context).
+ 
+   Step 2 — Expense form (reuse existing ExpenseForm.tsx logic):
+   - description, amount, payer, split type, date
+   - For group: pre-populated member list
+   - For person/anyone: participant search with user lookup via GET /api/users/search?q=
+ 
+   On submit:
+   - If group: POST /api/groups/:groupId/expenses (existing route)
+   - If direct: POST /api/expenses (Phase 9 route)
+ 
+   On success:
+   - Close modal
+   - Show toast "Expense added ✓"
+   - Invalidate/revalidate current page data (use router.refresh())
+ 
+3. app/api/users/search/route.ts (new):
+   GET /api/users/search?q=<query>
+   - Searches users by name or email (ILIKE '%query%')
+   - Returns only users who share at least one group with the current user
+     OR have had a direct expense with current user before
+   - Never returns all users globally (privacy)
+   - Returns max 10 results: [{ id, name, avatar }]
+ 
+4. Context-aware pre-fill:
+   - In GroupDetailPage, the "Add expense" button should pass ?context=group&groupId=GROUP_ID
+     to the FAB modal so Step 1 is skipped
+ 
+Security:
+- /api/users/search only returns users with a prior relationship (shared group or direct expense)
+- Never expose emails in search results (name + avatar only)
+- FAB is only rendered for authenticated users (check session in layout)
+```
+ 
+### Security Checklist — Phase 11
+ 
+- [ ] `/api/users/search` never returns arbitrary users — only those with a prior relationship
+- [ ] Email addresses never leaked in search response
+- [ ] FAB hidden for unauthenticated users (not just visually — don't render it)
+- [ ] Group pre-fill validates user is actually a member of that group
+### How to Test — Phase 11
+ 
+```bash
+# Search for a user you share a group with
+curl "http://localhost:3000/api/users/search?q=rahul" \
+  -H "Cookie: $COOKIE"
+# Expect: array of { id, name, avatar } — no email field
+ 
+# Search for a user you have NO relationship with
+curl "http://localhost:3000/api/users/search?q=stranger" \
+  -H "Cookie: $COOKIE"
+# Expect: [] (empty — cannot discover strangers)
+ 
+# Visually: FAB should appear on /dashboard, /groups/[id], /balances
+# Visually: FAB should NOT appear on /login, /register
+ 
+# Context pre-fill: visit /groups/GROUP_ID, click group's "Add expense" button
+# Modal should open directly at Step 2 with group pre-selected
+```
+ 
+---
+ 
+## PHASE 12 — NLP Quick-Add Widget
+ 
+### The Prompt
+ 
+```
+I'm building Fairshare. Add an AI-powered natural language expense input.
+The user types something like "paid 500 for pizza with Rahul and Priya last Friday"
+and the app parses it into a structured expense.
+ 
+1. components/nlp/NLPExpenseInput.tsx:
+   A text input inside the AddExpenseModal (Phase 11), above the structured form.
+   
+   UI:
+   - Placeholder: "e.g. paid 500 for dinner with Rahul"
+   - A "Parse ✨" button (or auto-trigger after 600ms debounce)
+   - Shows a loading spinner while parsing
+   - On success: animates the structured form fields filling in
+   - On failure: shows "Couldn't understand that — fill in manually"
+   - The structured form remains fully editable after parse
+ 
+2. app/api/expenses/parse/route.ts (new):
+   POST /api/expenses/parse
+   Body: { text: string; knownParticipants: { id: string; name: string }[] }
+   
+   - knownParticipants = the user's known contacts from /api/users/search
+     (passed by the client so the LLM can match names to IDs)
+   - Calls Claude claude-sonnet-4-6 via Anthropic SDK
+   - Rate limit: 10 requests/minute per user (stricter than auth routes)
+   - Never logs the raw text (privacy)
+ 
+   System prompt to Claude:
+   """
+   You are a parser for an expense splitting app. Extract structured data from
+   the user's natural language input. Today's date is {TODAY}.
+ 
+   Known participants (name → id mapping):
+   {knownParticipants as JSON}
+ 
+   Return ONLY valid JSON in this exact shape:
+   {
+     "description": "string",
+     "amount": number,         // always in the local currency's base unit (e.g. 500 for ₹500)
+     "payerId": "string | null",  // matched participant ID or null if unclear
+     "participantIds": ["string"],  // matched IDs; include payer
+     "date": "YYYY-MM-DD | null",
+     "splitType": "EQUAL",  // always EQUAL unless explicitly specified
+     "confidence": "high | medium | low"
+   }
+ 
+   Rules:
+   - If amount is ambiguous, return null for amount
+   - Match participant names case-insensitively, partial match is fine
+   - If the user says "I paid" or "paid by me", payerId is the current user
+   - Never invent participant IDs not in the known list
+   - If confidence is low, still return your best guess
+   """
+ 
+   Response handling:
+   - Parse JSON from Claude's response
+   - Validate shape with Zod before returning to client
+   - Return 200 with parsed data OR 422 with { error: "Could not parse" }
+ 
+3. Wiring:
+   - NLPExpenseInput sits at the top of AddExpenseModal Step 2
+   - On parse success, call a callback that sets form field values:
+     setValue('description', parsed.description)
+     setValue('amount', parsed.amount)
+     setValue('payerId', parsed.payerId)
+     etc.
+   - User can override any field after parse
+   - "Clear" button resets back to empty form
+ 
+4. lib/anthropic.ts (new):
+   import Anthropic from '@anthropic-ai/sdk'
+   export const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+ 
+   Add ANTHROPIC_API_KEY to .env.example
+ 
+Security:
+- Rate limit: 10 NLP parses/minute per user (DDoS / abuse prevention)
+- Input text is sanitized before sending to Claude (strip HTML, limit to 500 chars)
+- Never log raw user text
+- Claude response is validated with Zod before use — never trust raw LLM output shape
+- knownParticipants list is built server-side from the user's actual relationships,
+  not accepted from the client (prevents ID injection)
+- ANTHROPIC_API_KEY only used server-side, never exposed to client
+```
+ 
+### Security Checklist — Phase 12
+ 
+- [ ] `ANTHROPIC_API_KEY` is never in client-side code or API responses
+- [ ] Input text capped at 500 chars before sending to Claude
+- [ ] `knownParticipants` built server-side (not accepted from client)
+- [ ] Claude response validated with Zod — never used raw
+- [ ] Rate limiter: 10 req/min per user on `/api/expenses/parse`
+- [ ] Raw input text never logged (privacy)
+### How to Test — Phase 12
+ 
+```bash
+# Happy path — clear text
+curl -X POST http://localhost:3000/api/expenses/parse \
+  -H "Content-Type: application/json" \
+  -H "Cookie: $COOKIE" \
+  -d '{"text":"paid 600 for lunch with Rahul today"}'
+# Expect: { description: "lunch", amount: 600, payerId: "<your-id>",
+#           participantIds: ["<your-id>", "<rahul-id>"], date: "<today>",
+#           splitType: "EQUAL", confidence: "high" }
+ 
+# Ambiguous input
+curl -X POST http://localhost:3000/api/expenses/parse \
+  -H "Content-Type: application/json" \
+  -H "Cookie: $COOKIE" \
+  -d '{"text":"something with someone"}'
+# Expect: 422 or confidence: "low" with partial data
+ 
+# Rate limit
+for i in {1..11}; do
+  curl -X POST http://localhost:3000/api/expenses/parse \
+    -H "Content-Type: application/json" \
+    -H "Cookie: $COOKIE" \
+    -d '{"text":"paid 100 for coffee with Priya"}' &
+done
+# Expect: at least one 429 response
+ 
+# Confirm ANTHROPIC_API_KEY is not in any client bundle
+grep -r "ANTHROPIC_API_KEY" .next/static/ 2>/dev/null
+# Must return nothing
+```
+ 
+---
+ 
+## Cross-Cutting: Group Expense Tracking (Enhancement to existing phases)
+ 
+```
+I'm building Fairshare. Improve the group expense tracking with filters,
+categories, and a spending summary chart.
+ 
+1. Update Expense model — add optional category:
+   enum ExpenseCategory {
+     FOOD
+     TRANSPORT
+     ACCOMMODATION
+     UTILITIES
+     ENTERTAINMENT
+     SHOPPING
+     OTHER
+   }
+   Add: category ExpenseCategory @default(OTHER)
+   Migration: prisma migrate dev --name expense-category
+ 
+2. app/api/groups/[groupId]/expenses/route.ts — add query params:
+   GET /api/groups/:groupId/expenses?category=FOOD&from=2024-01-01&to=2024-12-31&q=pizza
+   - Filter by category (optional)
+   - Filter by date range (optional)
+   - Full-text search on description (ILIKE, optional)
+   - Return total filtered amount alongside results
+ 
+3. components/groups/ExpenseFilters.tsx:
+   - Category pills (ALL | FOOD | TRANSPORT | etc.) — horizontal scroll on mobile
+   - Date range picker (shadcn DateRangePicker)
+   - Search input with debounce (300ms)
+   - "Clear filters" button when any filter active
+ 
+4. components/groups/SpendingSummary.tsx:
+   - Bar chart (recharts): spending per category for this group
+   - Total spent this month vs last month
+   - Top spender in the group
+   - Use GET /api/groups/:groupId/stats (new route below)
+ 
+5. app/api/groups/[groupId]/stats/route.ts:
+   GET — returns:
+   {
+     totalSpend: number
+     byCategory: { category: string; amount: number }[]
+     byMember: { userId: string; name: string; paid: number; owes: number }[]
+     thisMonth: number
+     lastMonth: number
+   }
+   All amounts from non-deleted expenses only.
+ 
+Security:
+- requireGroupMember() on both /stats and filtered /expenses
+- Filter inputs sanitized (date format validated, category enum checked)
+- Text search uses parameterized Prisma queries (no raw SQL injection risk)
+```
+ 
+---
+ 
+## Implementation Order
+ 
+1. **Phase 9 first** — schema migration blocks everything else
+2. **Phase 10** — depends on Phase 9's direct expense data
+3. **Phase 11** — depends on Phase 9 (direct expense POST route) + user search
+4. **Phase 12** — depends on Phase 11 (FAB modal) + Anthropic SDK setup
+5. **Group Tracking** — independent, can be done anytime after Phase 2
+## New env vars to add to `.env.example`
+ 
+```env
+# Phase 12
+ANTHROPIC_API_KEY=sk-ant-...
+```
+ 
+## New API routes summary
+ 
+| Route | Method | Phase |
+|-------|--------|-------|
+| `/api/expenses` | GET, POST | 9 |
+| `/api/expenses/[id]` | GET, PATCH, DELETE | 9 |
+| `/api/balances` | GET | 10 |
+| `/api/direct-settle` | POST | 10 |
+| `/api/users/search` | GET | 11 |
+| `/api/expenses/parse` | POST | 12 |
+| `/api/groups/[id]/stats` | GET | Group Tracking |
