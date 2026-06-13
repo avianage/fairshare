@@ -22,7 +22,7 @@ services:
       retries: 5
 
   app:
-    build: .
+    image: fairshare:latest
     restart: unless-stopped
     depends_on:
       db:
@@ -30,11 +30,11 @@ services:
     environment:
       DATABASE_URL: postgresql://fairshare:${POSTGRES_PASSWORD:-fairshare}@db:5432/fairshare
       NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?set NEXTAUTH_SECRET (openssl rand -base64 32)}
-      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3000}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:-http://localhost:3005}
       UPLOAD_DIR: /data/uploads
       APP_VERSION: ${APP_VERSION:-docker}
     ports:
-      - "3000:3000"
+      - "3005:3000"
     volumes:
       - uploads:/data
 
