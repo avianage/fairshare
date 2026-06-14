@@ -18,30 +18,30 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex h-screen bg-background">
       {/* Sidebar — hidden on mobile, where a top nav row takes over */}
-      <aside className="hidden w-64 flex-col border-r bg-card md:flex">
-        <div className="flex h-16 items-center gap-2 border-b px-6">
+      <aside className="hidden w-64 flex-col border-r bg-card/65 backdrop-blur-md md:flex">
+        <div className="flex h-16 items-center gap-2.5 border-b px-6">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/icon.png"
             alt="Fairshare Logo"
-            className="h-8 w-8 rounded-lg object-contain"
+            className="h-8 w-8 rounded-lg object-contain shadow-sm"
           />
-          <span className="text-lg font-semibold tracking-tight">Fairshare</span>
+          <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/85 bg-clip-text text-transparent">Fairshare</span>
         </div>
         <SidebarNav showAdmin={session.user.isAdmin} />
-        <div className="border-t p-3">
+        <div className="border-t p-4 bg-muted/20">
           <Link
             href="/profile"
-            className="flex items-center gap-3 rounded-lg px-2 py-2 transition-colors hover:bg-accent/60"
+            className="flex items-center gap-3 rounded-xl border border-transparent bg-transparent px-3 py-2.5 transition-all duration-300 hover:bg-accent hover:border-border hover:shadow-sm"
           >
-            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/15 text-sm font-bold text-primary border border-primary/20 shadow-sm">
               {initial}
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block truncate text-sm font-medium">
+              <span className="block truncate text-sm font-semibold tracking-tight">
                 {session.user.name}
               </span>
-              <span className="block truncate text-xs text-muted-foreground">
+              <span className="block truncate text-xs text-muted-foreground/80">
                 {session.user.email}
               </span>
             </span>

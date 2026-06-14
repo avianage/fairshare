@@ -24,7 +24,7 @@ export function SidebarNav({ showAdmin }: { showAdmin?: boolean }) {
   const pathname = usePathname()
   const links = showAdmin ? [...baseLinks, adminLink] : baseLinks
   return (
-    <nav className="flex-1 space-y-1 p-3 text-sm">
+    <nav className="flex-1 space-y-1.5 p-4 text-sm">
       {links.map(({ href, label, icon: Icon }) => {
         const active = isActive(pathname, href)
         return (
@@ -32,13 +32,16 @@ export function SidebarNav({ showAdmin }: { showAdmin?: boolean }) {
             key={href}
             href={href}
             className={cn(
-              "flex items-center gap-3 rounded-lg px-3 py-2 font-medium transition-colors",
+              "group relative flex items-center gap-3 rounded-lg px-3.5 py-2.5 font-medium transition-all duration-200",
               active
-                ? "bg-accent text-accent-foreground"
+                ? "bg-primary/10 text-primary shadow-sm font-semibold"
                 : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
             )}
           >
-            <Icon className="h-4 w-4" />
+            {active && (
+              <span className="absolute left-0 top-1/4 h-1/2 w-1 rounded-r-full bg-primary" />
+            )}
+            <Icon className={cn("h-4 w-4 transition-transform duration-200 group-hover:scale-110", active ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
             {label}
           </Link>
         )

@@ -61,27 +61,34 @@ export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
   }
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader>
-        <CardTitle className="text-2xl">Welcome back</CardTitle>
+    <Card className="w-full max-w-md border-border/40 bg-card/75 backdrop-blur-lg shadow-xl relative overflow-hidden">
+      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-indigo-500 to-primary/80" />
+      <CardHeader className="space-y-1 pt-6">
+        <div className="flex items-center gap-2 mb-1.5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/icon.png" alt="Logo" className="h-6 w-6 rounded object-contain shadow-sm" />
+          <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Fairshare</span>
+        </div>
+        <CardTitle className="text-2xl font-extrabold tracking-tight">Welcome back</CardTitle>
         <CardDescription>Sign in to your Fairshare account</CardDescription>
       </CardHeader>
 
       <form onSubmit={handleSubmit(onSubmit)}>
         <CardContent className="space-y-4">
           {authError && (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
               {authError}
             </div>
           )}
 
           <div className="space-y-1.5">
-            <Label htmlFor="identifier">Email or Username</Label>
+            <Label htmlFor="identifier" className="text-xs font-medium text-muted-foreground">Email or Username</Label>
             <Input
               id="identifier"
               type="text"
               placeholder="you@example.com or @yourname"
               autoComplete="username"
+              className="bg-background/50 focus:bg-background transition-all"
               aria-invalid={!!errors.identifier}
               {...register("identifier")}
             />
@@ -91,13 +98,13 @@ export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password" className="text-xs font-medium text-muted-foreground">Password</Label>
             <div className="relative">
               <Input
                 id="password"
                 type={showPassword ? "text" : "password"}
                 autoComplete="current-password"
-                className="pr-10"
+                className="pr-10 bg-background/50 focus:bg-background transition-all"
                 aria-invalid={!!errors.password}
                 {...register("password")}
               />
@@ -117,15 +124,15 @@ export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
           </div>
         </CardContent>
 
-        <CardFooter className="flex flex-col gap-3">
-          <Button type="submit" className="w-full" disabled={isLoading}>
+        <CardFooter className="flex flex-col gap-4 pb-6">
+          <Button type="submit" className="w-full font-semibold transition-all hover:bg-primary/95 hover:shadow-md" disabled={isLoading}>
             {isLoading ? "Signing in…" : "Sign in"}
           </Button>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground text-center">
             Don&apos;t have an account?{" "}
             <Link
               href={`/register?callbackUrl=${encodeURIComponent(callbackUrl)}`}
-              className="text-primary hover:underline"
+              className="font-medium text-primary hover:underline"
             >
               Create one
             </Link>

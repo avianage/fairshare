@@ -27,6 +27,7 @@ export function SummaryCards({
       valueClass: "text-success",
       icon: ArrowDownLeft,
       iconClass: "bg-success/10 text-success",
+      borderClass: "border-t-2 border-t-success",
     },
     {
       label: "Total you owe",
@@ -34,6 +35,7 @@ export function SummaryCards({
       valueClass: "text-warning",
       icon: ArrowUpRight,
       iconClass: "bg-warning/10 text-warning",
+      borderClass: "border-t-2 border-t-warning",
     },
     {
       label: "Net balance",
@@ -41,6 +43,7 @@ export function SummaryCards({
       valueClass: netClass,
       icon: Scale,
       iconClass: "bg-primary/10 text-primary",
+      borderClass: "border-t-2 border-t-primary",
     },
   ]
 
@@ -52,23 +55,27 @@ export function SummaryCards({
         const card = (
           <Card
             key={it.label}
-            className={cn("p-5 shadow-sm", isNetBalance && "transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md cursor-pointer")}
+            className={cn(
+              "p-5 shadow-sm border bg-card/65 backdrop-blur-md relative overflow-hidden transition-all duration-300 hover:shadow-md hover:-translate-y-0.5",
+              it.borderClass,
+              isNetBalance && "cursor-pointer hover:border-primary/50"
+            )}
           >
             <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">{it.label}</p>
+              <p className="text-sm font-medium text-muted-foreground">{it.label}</p>
               <span className={cn("flex h-8 w-8 items-center justify-center rounded-lg", it.iconClass)}>
                 <Icon className="h-4 w-4" />
               </span>
             </div>
-            <p className={cn("mt-2 text-2xl font-semibold tabular-nums", it.valueClass)}>
+            <p className={cn("mt-3 text-2xl font-bold tracking-tight tabular-nums", it.valueClass)}>
               {it.value}
             </p>
           </Card>
         )
         return isNetBalance ? (
-          <Link key={it.label} href="/balances">{card}</Link>
+          <Link key={it.label} href="/balances" className="block">{card}</Link>
         ) : (
-          <div key={it.label}>{card}</div>
+          <div key={it.label} className="block">{card}</div>
         )
       })}
     </div>

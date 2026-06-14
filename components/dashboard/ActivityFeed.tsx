@@ -23,36 +23,48 @@ export function ActivityFeed({ activity }: { activity: Activity[] }) {
   }
 
   return (
-    <ul className="divide-y rounded-xl border bg-card">
-      {activity.map((a, i) => {
-        const names = a.involvedUsers.map((u) => u.name)
-        // De-dupe names while keeping order (payer often appears in splits too).
-        const unique = [...new Set(names)]
-        const who =
-          unique.length > 3
-            ? `${unique.slice(0, 3).join(", ")} +${unique.length - 3}`
-            : unique.join(", ")
+    <div className="relative border bg-card/65 backdrop-blur-md rounded-xl p-5 shadow-sm overflow-hidden">
+      <div className="absolute top-8 bottom-8 left-9.5 w-0.5 bg-border/70" />
+      <ul className="space-y-6 relative z-10">
+        {activity.map((a, i) => {
+          const names = a.involvedUsers.map((u) => u.name)
+          const unique = [...new Set(names)]
+          const who =
+            unique.length > 3
+              ? `${unique.slice(0, 3).join(", ")} +${unique.length - 3}`
+              : unique.join(", ")
 
-        return (
-          <li key={i} className="flex items-center gap-3 px-4 py-3">
-            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-base">
-              {a.type === "settlement" ? "💸" : categoryMeta("OTHER").icon}
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium">{a.description}</p>
-              <p className="truncate text-xs text-muted-foreground">
-                {a.groupName} · {who}
-              </p>
-            </div>
-            <div className="shrink-0 text-right">
-              <p className="text-sm font-semibold">{inr(a.amount)}</p>
-              <p className="text-xs text-muted-foreground">
-                {formatRelativeTime(a.date)}
-              </p>
-            </div>
-          </li>
-        )
-      })}
-    </ul>
+          const isSettlement = a.type === "settlement"
+
+          return (
+            <li key={i} className="flex gap-4 group items-start">
+              <span className={`relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-base transition-all duration-300 group-hover:scale-110 shadow-sm ${
+                isSettlement ? "bg-success/15 border border-success/30 text-success" : "bg-primary/10 border border-primary/20 text-primary"
+              }`}>
+                {isSettlement ? "💸" : categoryMeta("OTHER").icon}
+              </span>
+              
+              <div className="min-w-0 flex-1 pt-0.5">
+                <p className="truncate text-sm font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary">
+                  {a.description}
+                </p>
+                <p className="truncate text-xs text-muted-foreground mt-0.5">
+                  <span className="font-medium text-foreground/80">{a.groupName}</span> · {who}
+                </p>
+              </div>
+
+              <div className="shrink-0 text-right pt-0.5">
+                <p className={`text-sm font-bold tabular-nums ${isSettlement ? "text-success" : "text-foreground"}`}>
+                  {inr(a.amount)}
+                </p>
+                <p className="text-[10px] text-muted-foreground mt-0.5">
+                  {formatRelativeTime(a.date)}
+                </p>
+              </div>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
   )
 }

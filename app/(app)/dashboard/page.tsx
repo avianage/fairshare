@@ -6,6 +6,7 @@ import { SummaryCards } from "@/components/dashboard/SummaryCards"
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed"
 import { Button } from "@/components/ui/button"
 import { formatINR as inr } from "@/lib/format"
+import { cn } from "@/lib/utils"
 
 export default async function DashboardPage() {
   const session = await auth()
@@ -47,7 +48,7 @@ export default async function DashboardPage() {
             </Button>
           </div>
         ) : (
-          <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+          <ul className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {data.groups.map((g) => {
               const owes = g.userBalance < 0
               const even = Math.abs(g.userBalance) < 0.01
@@ -55,33 +56,37 @@ export default async function DashboardPage() {
                 <li key={g.id}>
                   <Link
                     href={`/groups/${g.id}`}
-                    className="flex h-full flex-col rounded-xl border bg-card p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
+                    className={cn(
+                      "flex h-full flex-col rounded-xl border bg-card/65 backdrop-blur-md p-5 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md hover:border-primary/30",
+                      even ? "border-border/60" : owes ? "border-l-4 border-l-warning" : "border-l-4 border-l-success"
+                    )}
                   >
                     <div className="flex items-center gap-3">
-                      <span className="text-2xl" aria-hidden>
+                      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-2xl" aria-hidden>
                         {g.emoji ?? "👥"}
                       </span>
-                      <span className="truncate font-medium">{g.name}</span>
+                      <span className="truncate font-semibold tracking-tight">{g.name}</span>
                     </div>
-                    <div className="mt-4 flex items-center justify-between text-xs">
-                      <span className="text-muted-foreground">
+                    <div className="mt-6 flex items-center justify-between text-xs">
+                      <span className="rounded-md bg-muted px-2 py-1 text-muted-foreground font-medium">
                         {g.memberCount}{" "}
                         {g.memberCount === 1 ? "member" : "members"}
                       </span>
                       <span
-                        className={
+                        className={cn(
+                          "rounded-md px-2.5 py-1 font-semibold",
                           even
-                            ? "text-muted-foreground"
+                            ? "bg-muted text-muted-foreground"
                             : owes
-                              ? "font-medium text-warning"
-                              : "font-medium text-success"
-                        }
+                              ? "bg-warning/10 text-warning"
+                              : "bg-success/10 text-success"
+                        )}
                       >
                         {even
-                          ? "settled up"
+                          ? "Settled up"
                           : owes
-                            ? `you owe ${inr(-g.userBalance)}`
-                            : `owed ${inr(g.userBalance)}`}
+                            ? `You owe ${inr(-g.userBalance)}`
+                            : `Owed ${inr(g.userBalance)}`}
                       </span>
                     </div>
                   </Link>

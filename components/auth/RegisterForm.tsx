@@ -139,27 +139,34 @@ export function RegisterForm({
   }
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader>
-        <CardTitle className="text-2xl">Create an account</CardTitle>
+    <Card className="w-full max-w-md border-border/40 bg-card/75 backdrop-blur-lg shadow-xl relative overflow-hidden">
+      <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-indigo-500 to-primary/80" />
+      <CardHeader className="space-y-1 pt-6">
+        <div className="flex items-center gap-2 mb-1.5">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/icon.png" alt="Logo" className="h-6 w-6 rounded object-contain shadow-sm" />
+          <span className="text-xs font-semibold tracking-wider text-muted-foreground uppercase">Fairshare</span>
+        </div>
+        <CardTitle className="text-2xl font-extrabold tracking-tight">Create an account</CardTitle>
         <CardDescription>Start splitting expenses with Fairshare</CardDescription>
       </CardHeader>
 
       <form onSubmit={handleSubmit(onSubmit)}>
         <CardContent className="space-y-4">
           {serverError && (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+            <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
               {serverError}
             </div>
           )}
 
           <div className="space-y-1.5">
-            <Label htmlFor="name">Name</Label>
+            <Label htmlFor="name" className="text-xs font-medium text-muted-foreground">Name</Label>
             <Input
               id="name"
               type="text"
               placeholder="Alice Smith"
               autoComplete="name"
+              className="bg-background/50 focus:bg-background transition-all"
               aria-invalid={!!errors.name}
               {...register("name")}
             />
@@ -169,15 +176,15 @@ export function RegisterForm({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="username">Username</Label>
+            <Label htmlFor="username" className="text-xs font-medium text-muted-foreground">Username</Label>
             <div className="relative">
-              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground text-sm">@</span>
+              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground text-sm font-medium">@</span>
               <Input
                 id="username"
                 type="text"
                 placeholder="yourname"
                 autoComplete="username"
-                className="pl-7"
+                className="pl-7 bg-background/50 focus:bg-background transition-all"
                 aria-invalid={!!errors.username}
                 {...register("username")}
               />
@@ -185,16 +192,17 @@ export function RegisterForm({
             {errors.username && (
               <p className="text-xs text-destructive">{errors.username.message}</p>
             )}
-            <p className="text-xs text-muted-foreground">Can be changed once every 30 days</p>
+            <p className="text-[10px] text-muted-foreground/85">Can be changed once every 30 days</p>
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email" className="text-xs font-medium text-muted-foreground">Email</Label>
             <Input
               id="email"
               type="email"
               placeholder="you@example.com"
               autoComplete="email"
+              className="bg-background/50 focus:bg-background transition-all"
               aria-invalid={!!errors.email}
               {...register("email")}
             />
@@ -204,13 +212,13 @@ export function RegisterForm({
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="password">Password</Label>
+            <Label htmlFor="password" className="text-xs font-medium text-muted-foreground">Password</Label>
             <div className="relative">
               <Input
                 id="password"
                 type={showPassword ? "text" : "password"}
                 autoComplete="new-password"
-                className="pr-10"
+                className="pr-10 bg-background/50 focus:bg-background transition-all"
                 aria-invalid={!!errors.password}
                 {...register("password")}
               />
@@ -232,15 +240,15 @@ export function RegisterForm({
           </div>
         </CardContent>
 
-        <CardFooter className="flex flex-col gap-3">
-          <Button type="submit" className="w-full" disabled={isLoading}>
+        <CardFooter className="flex flex-col gap-4 pb-6">
+          <Button type="submit" className="w-full font-semibold transition-all hover:bg-primary/95 hover:shadow-md" disabled={isLoading}>
             {isLoading ? "Creating account…" : "Create account"}
           </Button>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground text-center">
             Already have an account?{" "}
             <Link
               href={`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`}
-              className="text-primary hover:underline"
+              className="font-medium text-primary hover:underline"
             >
               Sign in
             </Link>

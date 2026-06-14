@@ -65,3 +65,30 @@
     @apply bg-background text-foreground antialiased;
   }
 }
+
+@layer utilities {
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-foreground via-foreground/90 to-primary;
+  }
+  
+  .glass-card {
+    @apply bg-card/65 backdrop-blur-md border border-border/50 shadow-lg;
+  }
+  
+  .glass-card-hover {
+    @apply hover:bg-card/80 hover:border-primary/30 transition-all duration-300;
+  }
+
+  .ambient-glow {
+    background: radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.12) 0%, rgba(99, 102, 241, 0) 50%);
+  }
+
+  .ambient-glow-green {
+    background: radial-gradient(circle at 50% 50%, rgba(16, 185, 129, 0.08) 0%, rgba(16, 185, 129, 0) 50%);
+  }
+
+  .ambient-glow-yellow {
+    background: radial-gradient(circle at 50% 50%, rgba(245, 158, 11) 0.08%, rgba(245, 158, 11, 0) 50%);
+  }
+}
+
