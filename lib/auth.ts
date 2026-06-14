@@ -5,13 +5,6 @@ import bcrypt from "bcryptjs"
 import { authConfig } from "@/lib/auth.config"
 import { prisma } from "@/lib/prisma"
 
-if (!process.env.NEXTAUTH_SECRET) {
-  throw new Error(
-    "NEXTAUTH_SECRET environment variable is not set. " +
-      "Generate one with: openssl rand -base64 32"
-  )
-}
-
 const credentialsSchema = z.object({
   email: z.string().email(),
   password: z.string().min(1),

@@ -8,7 +8,12 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends openssl \
   && rm -rf /var/lib/apt/lists/*
 COPY package.json package-lock.json ./
-RUN npm ci
+# Prefer IPv4 — the host has no IPv6 default route.
+# --ignore-scripts skips the @prisma/engines postinstall which
+# downloads a binary and often fails on this host's network.
+RUN npm config set fetch-retries 5 && npm config set fetch-retry-mintimeout 10000 \
+  && npm config set fetch-retry-maxtimeout 120000 && npm config set maxsockets 2 \
+  && npm ci --ignore-scripts
 
 # ── builder ──────────────────────────────────────────────────────────────────
 FROM node:20-slim AS builder
@@ -18,8 +23,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends openssl \
   && rm -rf /var/lib/apt/lists/*
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
-# Generate the Prisma client, then build the standalone Next output.
-RUN npx prisma generate
+# Generate the Prisma client, then install engine binaries with the expected names.
+# Binaries are pre-staged by the deploy script into .prisma-engines/ so Docker
+# never needs network access to binaries.prisma.sh (unreachable on this host).
+RUN PRISMA_QUERY_ENGINE_LIBRARY=/app/.prisma-engines/libquery-engine \
+    PRISMA_SCHEMA_ENGINE_BINARY=/app/.prisma-engines/schema-engine \
+    ./node_modules/.bin/prisma generate \
+    && mkdir -p node_modules/.prisma/client \
+    && cp .prisma-engines/libquery-engine \
+         node_modules/.prisma/client/libquery_engine-debian-openssl-3.0.x.so.node \
+    && cp .prisma-engines/schema-engine \
+         node_modules/@prisma/engines/schema-engine-debian-openssl-3.0.x \
+    && chmod +x \
+         node_modules/.prisma/client/libquery_engine-debian-openssl-3.0.x.so.node \
+         node_modules/@prisma/engines/schema-engine-debian-openssl-3.0.x
 RUN npm run build
 
 # ── runner ───────────────────────────────────────────────────────────────────
@@ -40,6 +57,11 @@ RUN groupadd --system --gid 1001 nodejs \
   && useradd --system --uid 1001 --gid nodejs nextjs \
   && mkdir -p /data/uploads \
   && chown -R nextjs:nodejs /data
+
+# Point Prisma directly at the pre-built binaries so binaryNeedsToBeDownloaded()
+# short-circuits at the env var check and never tries to write to root-owned dirs.
+ENV PRISMA_QUERY_ENGINE_LIBRARY=/app/node_modules/.prisma/client/libquery_engine-debian-openssl-3.0.x.so.node
+ENV PRISMA_SCHEMA_ENGINE_BINARY=/app/node_modules/@prisma/engines/schema-engine-debian-openssl-3.0.x
 
 # Next standalone server + static assets + public dir.
 COPY --from=builder /app/public ./public
