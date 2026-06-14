@@ -38,7 +38,8 @@ export async function PATCH(request: NextRequest) {
     )
   }
 
-  const { name, username } = parsed.data
+  const { name } = parsed.data
+  const username = parsed.data.username?.toLowerCase()
   const updateData: Record<string, unknown> = { name }
 
   if (username !== undefined) {

@@ -71,7 +71,8 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const { name, username, email, password } = parsed.data
+  const { name, email, password } = parsed.data
+  const username = parsed.data.username.toLowerCase()
 
   const [existingEmail, existingUsername] = await Promise.all([
     prisma.user.findUnique({ where: { email }, select: { id: true } }),

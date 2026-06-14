@@ -42,7 +42,13 @@ export async function GET(request: NextRequest) {
         isAdmin: true,
         isBanned: true,
         createdAt: true,
-        _count: { select: { memberships: true, expensesPaid: true } },
+        memberships: {
+          select: {
+            role: true,
+            group: { select: { id: true, name: true, emoji: true } },
+          },
+        },
+        _count: { select: { expensesPaid: true } },
       },
       orderBy: { createdAt: "desc" },
       skip: (page - 1) * limit,
@@ -54,10 +60,26 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ users, total, page, limit })
 }
 
-const patchSchema = z.object({
-  userId: z.string(),
-  action: z.enum(["ban", "unban", "makeAdmin", "removeAdmin", "delete"]),
-})
+const patchSchema = z.discriminatedUnion("action", [
+  z.object({ action: z.literal("ban"), userId: z.string() }),
+  z.object({ action: z.literal("unban"), userId: z.string() }),
+  z.object({ action: z.literal("makeAdmin"), userId: z.string() }),
+  z.object({ action: z.literal("removeAdmin"), userId: z.string() }),
+  z.object({ action: z.literal("delete"), userId: z.string() }),
+  z.object({
+    action: z.literal("updateProfile"),
+    userId: z.string(),
+    name: z.string().trim().min(2).max(80).optional(),
+    username: z
+      .string()
+      .min(3)
+      .max(20)
+      .regex(/^[a-zA-Z0-9_]+$/)
+      .toLowerCase()
+      .optional(),
+    email: z.string().email().optional(),
+  }),
+])
 
 export async function PATCH(request: NextRequest) {
   const session = await requireAdmin()
@@ -72,30 +94,64 @@ export async function PATCH(request: NextRequest) {
 
   const parsed = patchSchema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json({ error: "Validation failed" }, { status: 400 })
+    return NextResponse.json({ error: "Validation failed", details: parsed.error.flatten() }, { status: 400 })
   }
 
-  const { userId, action } = parsed.data
+  const { action, userId } = parsed.data
 
-  // Prevent admins from acting on themselves
-  if (userId === session.user.id) {
+  if (userId === session.user.id && ["ban", "removeAdmin", "delete"].includes(action)) {
     return NextResponse.json({ error: "Cannot perform this action on yourself" }, { status: 400 })
   }
 
   if (action === "delete") {
-    await prisma.user.delete({ where: { id: userId } })
+    // Clear all FK references before deleting
+    await prisma.$transaction([
+      prisma.expenseSplit.deleteMany({ where: { userId } }),
+      prisma.settlement.deleteMany({ where: { OR: [{ senderId: userId }, { receiverId: userId }] } }),
+      prisma.directParticipant.deleteMany({ where: { userId } }),
+      prisma.expense.deleteMany({ where: { payerId: userId } }),
+      prisma.groupMember.deleteMany({ where: { userId } }),
+      prisma.user.delete({ where: { id: userId } }),
+    ])
     return NextResponse.json({ success: true })
   }
 
-  const data: Record<string, boolean> = {}
-  if (action === "ban") data.isBanned = true
-  if (action === "unban") data.isBanned = false
-  if (action === "makeAdmin") data.isAdmin = true
-  if (action === "removeAdmin") data.isAdmin = false
+  if (action === "updateProfile") {
+    const { name, username, email } = parsed.data
+    const updateData: Record<string, unknown> = {}
+    if (name) updateData.name = name
+    if (email) {
+      const taken = await prisma.user.findFirst({ where: { email, NOT: { id: userId } }, select: { id: true } })
+      if (taken) return NextResponse.json({ error: "Email already in use" }, { status: 409 })
+      updateData.email = email
+    }
+    if (username) {
+      const taken = await prisma.user.findFirst({ where: { username, NOT: { id: userId } }, select: { id: true } })
+      if (taken) return NextResponse.json({ error: "Username already taken" }, { status: 409 })
+      updateData.username = username
+      updateData.usernameChangedAt = new Date()
+    }
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json({ error: "Nothing to update" }, { status: 400 })
+    }
+    const user = await prisma.user.update({
+      where: { id: userId },
+      data: updateData,
+      select: { id: true, name: true, username: true, email: true, isAdmin: true, isBanned: true },
+    })
+    return NextResponse.json(user)
+  }
+
+  const flagMap: Record<string, Record<string, boolean>> = {
+    ban: { isBanned: true },
+    unban: { isBanned: false },
+    makeAdmin: { isAdmin: true },
+    removeAdmin: { isAdmin: false },
+  }
 
   const user = await prisma.user.update({
     where: { id: userId },
-    data,
+    data: flagMap[action],
     select: { id: true, isBanned: true, isAdmin: true },
   })
 
