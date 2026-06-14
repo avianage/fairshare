@@ -37,7 +37,7 @@ function EditExpenseForm({
   onCancel,
 }: {
   expense: Expense
-  groupId: string
+  groupId: string | null
   onSave: () => void
   onCancel: () => void
 }) {
@@ -55,7 +55,10 @@ function EditExpenseForm({
       return
     }
     setSaving(true)
-    const res = await fetch(`/api/groups/${groupId}/expenses/${expense.id}`, {
+    const url = groupId
+      ? `/api/groups/${groupId}/expenses/${expense.id}`
+      : `/api/expenses/${expense.id}`
+    const res = await fetch(url, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -155,7 +158,7 @@ export function ExpenseCard({
 }: {
   expense: Expense
   currency: string
-  groupId: string
+  groupId: string | null
   currentUserId: string
   isAdmin: boolean
 }) {
@@ -170,10 +173,10 @@ export function ExpenseCard({
   async function deleteExpense() {
     setDeleting(true)
     try {
-      const res = await fetch(
-        `/api/groups/${groupId}/expenses/${expense.id}`,
-        { method: "DELETE" }
-      )
+      const deleteUrl = groupId
+        ? `/api/groups/${groupId}/expenses/${expense.id}`
+        : `/api/expenses/${expense.id}`
+      const res = await fetch(deleteUrl, { method: "DELETE" })
       if (!res.ok) {
         const data = await res.json().catch(() => null)
         toast.error(data?.error ?? "Could not delete the expense.")
@@ -252,12 +255,14 @@ export function ExpenseCard({
             </p>
           )}
 
-          <ReceiptManager
-            groupId={groupId}
-            expenseId={expense.id}
-            receiptUrl={expense.receiptUrl}
-            canManage={canManage}
-          />
+          {groupId && (
+            <ReceiptManager
+              groupId={groupId}
+              expenseId={expense.id}
+              receiptUrl={expense.receiptUrl}
+              canManage={canManage}
+            />
+          )}
 
           {canManage && (
             <div className="mt-3 flex items-center justify-between border-t pt-3">

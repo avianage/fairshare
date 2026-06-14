@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
+import { ChevronRight } from "lucide-react"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { Button } from "@/components/ui/button"
@@ -39,6 +40,19 @@ export default async function GroupsPage() {
           <Link href="/groups/new">New group</Link>
         </Button>
       </div>
+
+      {/* Non-group expenses pseudo-group card */}
+      <Link
+        href="/direct-expenses"
+        className="mb-6 flex items-center gap-3 rounded-xl border border-dashed bg-card/50 p-5 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
+      >
+        <span className="text-2xl" aria-hidden>💸</span>
+        <div className="min-w-0 flex-1">
+          <p className="font-medium">Non-group expenses</p>
+          <p className="text-xs text-muted-foreground">Individual expenses between you and others</p>
+        </div>
+        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+      </Link>
 
       {memberships.length === 0 ? (
         <div className="rounded-xl border border-dashed p-10 text-center">
