@@ -56,7 +56,7 @@ export function MobileNav({ showAdmin }: { showAdmin?: boolean }) {
       className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around border-t border-border bg-background/80 backdrop-blur-lg px-6 md:hidden"
       style={{
         paddingBottom: "env(safe-area-inset-bottom)",
-        height: "calc(4rem + env(safe-area-inset-bottom))",
+        height: "calc(5rem + env(safe-area-inset-bottom))",
       }}
     >
       {links.map(({ href, label, icon: Icon }) => {

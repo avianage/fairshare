@@ -72,7 +72,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden px-4 pt-4 pb-[calc(5rem+env(safe-area-inset-bottom))] sm:px-6 sm:pt-6 sm:pb-[calc(5rem+env(safe-area-inset-bottom))] md:p-6 lg:p-8">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden px-4 pt-4 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-6 sm:pt-6 sm:pb-[calc(6rem+env(safe-area-inset-bottom))] md:p-6 lg:p-8">
           <div className="mx-auto w-full max-w-5xl">{children}</div>
         </main>
 
