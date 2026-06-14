@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { randomBytes } from "crypto"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
@@ -6,12 +7,18 @@ export const runtime = "nodejs"
 
 const EXPIRY_DAYS = 30
 
-function inviteUrl(token: string, origin: string) {
-  return `${origin}/friend-invite/${token}`
+function generateToken(): string {
+  const hex = randomBytes(8).toString("hex") // 16 hex chars
+  return `${hex.slice(0, 4)}-${hex.slice(4, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}`
+}
+
+function buildInviteUrl(token: string) {
+  const base = (process.env.NEXTAUTH_URL ?? "http://localhost:3000").replace(/\/$/, "")
+  return `${base}/friend-invite/${token}`
 }
 
 // GET /api/friends/invite — return the caller's current active invite link, or null
-export async function GET(request: Request) {
+export async function GET() {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
@@ -22,30 +29,27 @@ export async function GET(request: Request) {
 
   if (!invite) return NextResponse.json({ inviteUrl: null })
 
-  const origin = new URL(request.url).origin
   return NextResponse.json({
-    inviteUrl: inviteUrl(invite.token, origin),
+    inviteUrl: buildInviteUrl(invite.token),
     expiresAt: invite.expiresAt,
   })
 }
 
 // POST /api/friends/invite — generate (or regenerate) the caller's reusable invite link
-export async function POST(request: Request) {
+export async function POST() {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
   const expiresAt = new Date(Date.now() + EXPIRY_DAYS * 24 * 60 * 60 * 1000)
+  const token = generateToken()
 
-  // Delete any existing invite and create a fresh one
   await prisma.friendInvite.deleteMany({ where: { invitedById: session.user.id } })
-  const invite = await prisma.friendInvite.create({
-    data: { invitedById: session.user.id, expiresAt },
-    select: { token: true, expiresAt: true },
+  await prisma.friendInvite.create({
+    data: { token, invitedById: session.user.id, expiresAt },
   })
 
-  const origin = new URL(request.url).origin
   return NextResponse.json({
-    inviteUrl: inviteUrl(invite.token, origin),
-    expiresAt: invite.expiresAt,
+    inviteUrl: buildInviteUrl(token),
+    expiresAt,
   })
 }

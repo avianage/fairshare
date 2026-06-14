@@ -194,7 +194,7 @@ model Friendship {
 
 model FriendInvite {
   id          String   @id @default(cuid())
-  token       String   @unique @default(cuid())
+  token       String   @unique
   invitedById String
   expiresAt   DateTime
   createdAt   DateTime @default(now())
