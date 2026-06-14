@@ -136,16 +136,11 @@ export default async function GroupPage({
 
           <SpendingSummary groupId={group.id} />
 
-          <div className="flex items-center justify-between">
-            <h2 className="text-sm font-medium text-muted-foreground">
-              Expenses
-            </h2>
-            <AddExpense
-              groupId={group.id}
-              members={members}
-              currentUserId={session.user.id}
-            />
-          </div>
+          <AddExpense
+            groupId={group.id}
+            members={members}
+            currentUserId={session.user.id}
+          />
 
           <GroupExpenses
             groupId={group.id}
