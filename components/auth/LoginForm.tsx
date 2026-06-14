@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/card"
 
 const loginSchema = z.object({
-  email: z.string().email("Enter a valid email"),
+  identifier: z.string().min(1, "Email or username is required"),
   password: z.string().min(1, "Password is required"),
 })
 
@@ -42,7 +42,7 @@ export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
     setAuthError(null)
 
     const result = await signIn("credentials", {
-      email: data.email,
+      identifier: data.identifier,
       password: data.password,
       redirect: false,
     })
@@ -74,17 +74,17 @@ export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
           )}
 
           <div className="space-y-1.5">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="identifier">Email or Username</Label>
             <Input
-              id="email"
-              type="email"
-              placeholder="you@example.com"
-              autoComplete="email"
-              aria-invalid={!!errors.email}
-              {...register("email")}
+              id="identifier"
+              type="text"
+              placeholder="you@example.com or @yourname"
+              autoComplete="username"
+              aria-invalid={!!errors.identifier}
+              {...register("identifier")}
             />
-            {errors.email && (
-              <p className="text-xs text-destructive">{errors.email.message}</p>
+            {errors.identifier && (
+              <p className="text-xs text-destructive">{errors.identifier.message}</p>
             )}
           </div>
 

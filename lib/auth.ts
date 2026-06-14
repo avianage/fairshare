@@ -6,7 +6,7 @@ import { authConfig } from "@/lib/auth.config"
 import { prisma } from "@/lib/prisma"
 
 const credentialsSchema = z.object({
-  email: z.string().email(),
+  identifier: z.string().min(1),
   password: z.string().min(1),
 })
 
@@ -16,17 +16,21 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
   providers: [
     Credentials({
       credentials: {
-        email: { label: "Email", type: "email" },
+        identifier: { label: "Email or Username", type: "text" },
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
         const parsed = credentialsSchema.safeParse(credentials)
         if (!parsed.success) return null
 
-        const { email, password } = parsed.data
+        const { identifier, password } = parsed.data
 
-        const user = await prisma.user.findUnique({
-          where: { email },
+        // Strip leading @ from username if present
+        const clean = identifier.startsWith("@") ? identifier.slice(1) : identifier
+        const isEmail = clean.includes("@")
+
+        const user = await prisma.user.findFirst({
+          where: isEmail ? { email: clean } : { username: clean },
           select: {
             id: true,
             name: true,

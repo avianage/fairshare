@@ -120,7 +120,7 @@ export function RegisterForm({
 
     // Auto sign-in after successful registration
     const signInResult = await signIn("credentials", {
-      email: data.email,
+      identifier: data.email,
       password: data.password,
       redirect: false,
     })
