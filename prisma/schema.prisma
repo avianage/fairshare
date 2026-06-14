@@ -52,6 +52,9 @@ model User {
   settlementsSent     Settlement[]        @relation("SettlementSender")
   settlementsRecvd    Settlement[]        @relation("SettlementReceiver")
   directParticipation DirectParticipant[] @relation("DirectParticipantUser")
+  friendships         Friendship[]        @relation("FriendshipUser")
+  friendOf            Friendship[]        @relation("FriendshipFriend")
+  friendInvitesSent   FriendInvite[]      @relation("FriendInviteOwner")
 }
 
 model Group {
@@ -174,4 +177,30 @@ model Settlement {
   @@index([groupId])
   // Direct settlements are looked up by the two parties.
   @@index([senderId, receiverId])
+}
+
+model Friendship {
+  id        String   @id @default(cuid())
+  userId    String
+  friendId  String
+  createdAt DateTime @default(now())
+
+  user   User @relation("FriendshipUser",   fields: [userId],   references: [id], onDelete: Cascade)
+  friend User @relation("FriendshipFriend", fields: [friendId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, friendId])
+  @@index([userId])
+}
+
+model FriendInvite {
+  id          String   @id @default(cuid())
+  token       String   @unique @default(cuid())
+  invitedById String
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  invitedBy User @relation("FriendInviteOwner", fields: [invitedById], references: [id], onDelete: Cascade)
+
+  @@index([invitedById])
+  @@index([token])
 }

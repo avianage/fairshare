@@ -124,6 +124,7 @@ export function DirectExpenseForm({
           onChange={setOthers}
           multi={mode === "anyone"}
           excludeIds={[currentUser.id]}
+          showSuggestions
         />
       </div>
 

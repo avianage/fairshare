@@ -11,24 +11,38 @@ function initials(name: string) {
 }
 
 /**
- * Debounced (300ms) user search backed by /api/users/search. Only surfaces
- * people the caller already shares a group or direct expense with.
+ * Debounced (300ms) user search backed by /api/users/search.
+ * Surfaces friends, group co-members, and prior direct expense participants.
+ * When showSuggestions is true, shows friends as pre-populated options before the user types.
  */
 export function UserSearch({
   selected,
   onChange,
   multi = true,
   excludeIds = [],
+  showSuggestions = false,
 }: {
   selected: SearchUser[]
   onChange: (users: SearchUser[]) => void
   multi?: boolean
   excludeIds?: string[]
+  showSuggestions?: boolean
 }) {
   const [q, setQ] = useState("")
   const [results, setResults] = useState<SearchUser[]>([])
+  const [suggestions, setSuggestions] = useState<SearchUser[]>([])
   const [loading, setLoading] = useState(false)
+  const [focused, setFocused] = useState(false)
   const debounce = useRef<ReturnType<typeof setTimeout>>()
+
+  // Load friend suggestions on mount
+  useEffect(() => {
+    if (!showSuggestions) return
+    fetch("/api/users/search?q=")
+      .then((r) => r.json())
+      .then((d) => setSuggestions(d.users ?? []))
+      .catch(() => {})
+  }, [showSuggestions])
 
   useEffect(() => {
     if (debounce.current) clearTimeout(debounce.current)
@@ -53,7 +67,12 @@ export function UserSearch({
   }, [q])
 
   const exclude = new Set([...excludeIds, ...selected.map((s) => s.id)])
-  const visible = results.filter((u) => !exclude.has(u.id))
+
+  // When typing: show search results. When not typing but focused with suggestions: show friends.
+  const query = q.trim()
+  const activeList = query.length > 0 ? results : suggestions
+  const visible = activeList.filter((u) => !exclude.has(u.id))
+  const showDropdown = focused && (query.length > 0 || (showSuggestions && visible.length > 0))
 
   function add(u: SearchUser) {
     onChange(multi ? [...selected, u] : [u])
@@ -88,34 +107,41 @@ export function UserSearch({
           <Input
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            placeholder="Search by name…"
+            onFocus={() => setFocused(true)}
+            onBlur={() => setTimeout(() => setFocused(false), 150)}
+            placeholder="Search friends by name…"
             autoComplete="off"
           />
-          {q.trim() && (
+          {showDropdown && (
             <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-lg border bg-popover shadow-lg">
               {loading ? (
                 <p className="px-3 py-2 text-sm text-muted-foreground">Searching…</p>
               ) : visible.length === 0 ? (
                 <p className="px-3 py-2 text-sm text-muted-foreground">
-                  No matches. You can only add people you share a group or expense with.
+                  No matches among your friends or shared groups.
                 </p>
               ) : (
-                <ul className="max-h-56 overflow-y-auto">
-                  {visible.map((u) => (
-                    <li key={u.id}>
-                      <button
-                        type="button"
-                        onClick={() => add(u)}
-                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-accent"
-                      >
-                        <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
-                          {initials(u.name)}
-                        </span>
-                        {u.name}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
+                <>
+                  {query.length === 0 && showSuggestions && (
+                    <p className="px-3 pt-2 pb-1 text-xs font-medium text-muted-foreground uppercase tracking-wide">Friends</p>
+                  )}
+                  <ul className="max-h-56 overflow-y-auto">
+                    {visible.map((u) => (
+                      <li key={u.id}>
+                        <button
+                          type="button"
+                          onClick={() => add(u)}
+                          className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-accent"
+                        >
+                          <span className="flex h-7 w-7 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                            {initials(u.name)}
+                          </span>
+                          {u.name}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </>
               )}
             </div>
           )}

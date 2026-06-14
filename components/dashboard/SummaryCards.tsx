@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { ArrowDownLeft, ArrowUpRight, Scale } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { formatINR as inr } from "@/lib/format"
@@ -47,16 +48,15 @@ export function SummaryCards({
     <div className="grid gap-4 sm:grid-cols-3">
       {items.map((it) => {
         const Icon = it.icon
-        return (
-          <Card key={it.label} className="p-5 shadow-sm">
+        const isNetBalance = it.label === "Net balance"
+        const card = (
+          <Card
+            key={it.label}
+            className={cn("p-5 shadow-sm", isNetBalance && "transition-all hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md cursor-pointer")}
+          >
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">{it.label}</p>
-              <span
-                className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-lg",
-                  it.iconClass
-                )}
-              >
+              <span className={cn("flex h-8 w-8 items-center justify-center rounded-lg", it.iconClass)}>
                 <Icon className="h-4 w-4" />
               </span>
             </div>
@@ -64,6 +64,11 @@ export function SummaryCards({
               {it.value}
             </p>
           </Card>
+        )
+        return isNetBalance ? (
+          <Link key={it.label} href="/balances">{card}</Link>
+        ) : (
+          <div key={it.label}>{card}</div>
         )
       })}
     </div>
