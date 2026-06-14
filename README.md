@@ -46,25 +46,29 @@ like a native app.
 ## Feature overview
 
 ### Authentication & accounts
-- Email + password **registration** with a live password-strength meter, **auto sign-in** afterwards.
-- **Login** with deliberately generic errors (no account enumeration).
+
+- **Registration** with display name, email, **unique username** (3–20 chars, letters/digits/underscore,
+  stored lowercase), and a live password-strength meter. Auto sign-in after registration.
+- **Login** with email _or_ `@username` — both work interchangeably. Password visibility toggle on
+  both forms. Deliberately generic errors (no account enumeration).
 - JWT sessions in cookies; protected routes enforced by **Edge middleware** _and_ re-checked in the
   app layout (defense-in-depth).
-- **Profile page** — update display name, **change password** (verifies current password, re-hashes
-  at cost 12, rejects reusing the same password). Email is shown read-only.
+- **Profile page** — update display name, **change username** (30-day cooldown enforced server-side),
+  **change password** (verifies current password, re-hashes at cost 12, rejects reusing the same
+  password). Light / dark / system **theme toggle**.
 
 ### Groups
+
 - Create / rename / delete groups (emoji, description, currency). Creator becomes **ADMIN**.
 - **Friendly UUID group URLs** — `/groups/715d56cf-51e8-41df-b0f4-883feb460612`.
 - **Member management** — roles (ADMIN / MEMBER), remove members, leave group, last-admin /
   last-member guards.
-- **Two ways to add people:**
-  - **Add by email** — instantly add an existing Fairshare user (admin only).
-  - **Invite links** — generate a shareable link (7-day expiry, single-use); the invitee logs in or
-    signs up and is auto-joined. The whole `invite → login/register → join` chain preserves the
-    callback so nobody loses the invite.
+- **Invite links** — the only way to add people: generate a shareable link (7-day expiry,
+  single-use); the invitee logs in or signs up and is auto-joined. The whole
+  `invite → login/register → join` chain preserves the callback so nobody loses the invite.
 
 ### Expenses
+
 - Add expenses with a **payer**, **date**, **category** (Food, Transport, Groceries, Travel,
   Accommodation, Entertainment, Shopping, Utilities, Health, Other), and **notes**.
 - **Four split types**, all recomputed **server-side** (never trust client amounts), cents-exact via
@@ -73,22 +77,40 @@ like a native app.
   - **EXACT** — explicit amount per person (must sum to total).
   - **PERCENTAGE** — percentages (must sum to 100).
   - **SHARES** — integer share weights (e.g. 2:1:1).
-- **Edit** (payer or admin) — changing the amount **rescales splits proportionally**, preserving the
-  original ratios (an EXACT 70/30 stays 70/30; equal stays equal).
+- **Inline edit** (payer or admin) — tap the pencil icon on any expense card to edit description,
+  amount, category, and notes without leaving the page. Changing the amount **rescales splits
+  proportionally**, preserving the original ratios (an EXACT 70/30 stays 70/30; equal stays equal).
 - **Soft delete** — deleted expenses are excluded from every balance/stat query.
 - **Receipts** — attach an image per expense; see [Receipts](#receipts-secure-image-uploads).
 
 ### Direct (non-group) expenses
+
 - Split with **one person** or **anyone** without creating a group (`groupId = null`, participants
   tracked separately). Same split types, edit, and soft-delete rules as group expenses.
+- The **direct expense user-search** shows friends as pre-populated suggestions before you type,
+  removing the need to know someone's exact name upfront.
+
+### Friends
+
+- **Personal invite links** — your unique, reusable friend-invite link
+  (`/friend-invite/xxxx-xxxx-xxxx-xxxx`, 30-day expiry, human-readable token). Share it anywhere;
+  clicking it establishes a mutual friendship with one tap.
+- **Friends page** (`/friends`) — view your invite link, regenerate it, see all friends with
+  "friends since" dates, and remove friends.
+- Friends appear as **instant suggestions** in the direct expense user-search (pre-populated on
+  focus, before typing).
+- Friendship is mutual: accepting one link creates both directions in the database.
+- Self-invite, duplicate-friendship, and banned-inviter edge cases are all handled gracefully.
 
 ### Balances & settle-up
+
 - **Per-group balances** — a debt graph is simplified into the **minimal set of transfers** that
   settles everyone; settlements are modelled as reverse debts so they cancel cleanly.
 - **Record a settlement** within a group — guarded so you can only record your own payment (or as an
   admin), both parties must be members, and the amount can't exceed the real debt.
 
 ### Global "Who Owes Whom"
+
 - A cross-everything **balances page**: your net with each person across **all groups + direct
   expenses**, split into "they owe you" / "you owe", with a hero net figure and a **confetti**
   all-settled state.
@@ -98,23 +120,38 @@ like a native app.
   a **direct settle-up** button (only settles the direct portion; group debts settle in-group).
 
 ### Dashboard
+
 - Cross-group **summary cards** (total owed to you / you owe / net) that **include direct expenses**.
+  The **Net Balance card** links directly to the `/balances` page.
 - Your **groups** with per-group balance, and a **recent activity** feed merging group + direct
   expenses and settlements.
 
+### Admin panel
+
+- Accessible only to users with `isAdmin = true` (shown in the sidebar/nav as a shield icon).
+- **User table** — displays all users with name, username, email, group count (clickable to expand),
+  expense count, admin/banned status, and join date. Full desktop table + mobile card layout.
+- **Actions per user**: Edit profile (name, username, email — bypasses cooldowns), Ban / Unban,
+  Promote to admin / Demote, Delete (cascades through all related data).
+- **Group panel** — click a user's group count to see every group they belong to (emoji, name, role).
+- Site admins can **edit and delete any expense** regardless of group membership.
+
 ### Filtering, search & spending insights
+
 - Per-group **filters**: category pills, **date range**, and **debounced description search**
   (parameterized ILIKE), with a live **filtered total**.
 - **Spending summary** (Recharts): bar chart of spend per category, **this-month vs last-month**, and
   the **top spender**.
 
 ### Quick add — floating button + modal
+
 - A persistent **floating "Add expense" button** on every page. On a group page it pre-selects that
   group; elsewhere it asks **Group / Person / Anyone**, then shows the right form.
-- **Relationship-scoped user search** (`/api/users/search`) — only surfaces people you share a group
-  or a past direct expense with, and **never returns emails**.
+- **Relationship-scoped user search** (`/api/users/search`) — only surfaces people you share a group,
+  past direct expense, or friendship with, and **never returns emails**.
 
 ### AI natural-language expense entry (optional)
+
 - `POST /api/expenses/parse` turns _"paid 500 for dinner with Rahul"_ into a structured expense using
   **Claude (claude-sonnet-4-6)**.
 - Privacy-first: input is sanitized + length-capped, raw text is **never logged**, the contact list
@@ -124,23 +161,28 @@ like a native app.
   route degrades to `503` and the app works fully without it.
 
 ### Receipts (secure image uploads)
+
 - Upload one image per expense. **MIME is validated by magic bytes** (not the `Content-Type`),
   filenames are server-generated UUIDs (the client name is discarded), 5 MB cap, stored **outside the
   web root**, and served only to members/participants of that expense via path-traversal-guarded
   routes.
 
 ### Progressive Web App
-- Installable to your phone's home screen; runs **full-screen / standalone**.
+
+- Installable to your phone's home screen; runs **full-screen / standalone**. The install icon uses
+  the app favicon directly.
 - Web manifest with **maskable icons** (native Android adaptive icon), service worker that caches the
   app shell and static assets (never auth, mutations, receipts, or tokens), and an **install prompt**
   (with an **iOS "Add to Home Screen" hint**, since iOS has no auto-prompt).
 - Service worker caches are **purged on sign-out** so nothing leaks on a shared device.
 
 ### Theming & UX polish
+
 - App-wide **light / dark / system** theme via semantic tokens; theme toggle in the header; toasts
   follow the theme.
-- Responsive layout (desktop sidebar + mobile bottom nav), skeleton loaders, confirm dialogs,
-  Indian-rupee (`₹`, 1,00,000) formatting, and relative timestamps.
+- Responsive layout (desktop sidebar + mobile bottom nav with taller touch targets), skeleton loaders,
+  confirm dialogs, Indian-rupee (`₹`, 1,00,000) formatting, relative timestamps, and **no
+  accidental zoom** on mobile (viewport `maximum-scale: 1`).
 
 ---
 
@@ -150,7 +192,7 @@ like a native app.
   `passwordHash`).
 - **Authorization** — every group route calls `requireGroupMember` / `requireGroupAdmin` first;
   expense/settlement actions verify payer/sender identity; non-participants get opaque `404`s (no
-  existence leak).
+  existence leak). Site admins bypass membership checks only via explicit `isAdmin` flag in the JWT.
 - **Server-side money** — all split amounts are recomputed on the server; client-supplied split
   values are never trusted.
 - **Rate limiting** — in-memory sliding window in middleware: register 5/h, login 10/h, NLP 10/min,
@@ -172,7 +214,8 @@ like a native app.
 ## Architecture notes
 
 - **Two-file NextAuth split** — `lib/auth.config.ts` is Edge-safe (no Prisma) for `middleware.ts`;
-  `lib/auth.ts` is the full Node config (Credentials provider, bcrypt).
+  `lib/auth.ts` is the full Node config (Credentials provider, bcrypt). Login accepts email or
+  `@username` — `authorize()` strips the leading `@` and routes to the correct DB lookup.
 - **Split engine** (`lib/splitEngine.ts`) — pure, integer-cent functions: `calculateSplits`
   (dispatcher), `rescaleSplit` (proportional edit), `buildRawDebts` + `simplifyDebts` (greedy debt
   minimization). Covered by unit tests.
@@ -181,6 +224,8 @@ like a native app.
 - **Money** — stored as Prisma `Decimal(12,2)`; converted to `number` at a single serialization
   boundary (`lib/expense-shape.ts`).
 - **Group IDs** — UUID v4 (`lib/ids.ts`) for clean URLs.
+- **Friend invite tokens** — `xxxx-xxxx-xxxx-xxxx` hex format (8 random bytes, formatted for
+  readability), generated in app code rather than relying on DB defaults.
 
 ---
 
@@ -296,11 +341,11 @@ All routes are JSON; protected routes require a session (`401` otherwise). Money
 **Auth & profile**
 | Method | Path | Purpose |
 |---|---|---|
-| `POST` | `/api/auth/register` | Create account (rate-limited) |
-| `*` | `/api/auth/[...nextauth]` | NextAuth sign-in/out/session |
-| `PATCH` | `/api/profile` | Update display name |
+| `POST` | `/api/auth/register` | Create account with username (rate-limited) |
+| `*` | `/api/auth/[...nextauth]` | NextAuth sign-in/out/session (email or @username) |
+| `PATCH` | `/api/profile` | Update display name / username (30-day cooldown) |
 | `POST` | `/api/profile/password` | Change password |
-| `GET` | `/api/users/search?q=` | Relationship-scoped user search (no emails) |
+| `GET` | `/api/users/search?q=` | Relationship-scoped user search (friends + shared groups) |
 | `GET` | `/api/health` | Liveness + DB check |
 
 **Groups & members**
@@ -308,10 +353,10 @@ All routes are JSON; protected routes require a session (`401` otherwise). Money
 |---|---|---|
 | `GET` `POST` | `/api/groups` | List / create groups |
 | `GET` `PATCH` `DELETE` | `/api/groups/[groupId]` | Read / rename / soft-delete group |
-| `GET` `POST` | `/api/groups/[groupId]/members` | List / add-by-email members |
+| `GET` | `/api/groups/[groupId]/members` | List members |
 | `DELETE` | `/api/groups/[groupId]/members/[userId]` | Remove member / leave |
 | `POST` | `/api/groups/[groupId]/invite` | Generate invite link |
-| `GET` `POST` | `/api/invite/[token]` | Preview / accept invite |
+| `GET` `POST` | `/api/invite/[token]` | Preview / accept group invite |
 
 **Expenses, balances, stats**
 | Method | Path | Purpose |
@@ -330,20 +375,40 @@ All routes are JSON; protected routes require a session (`401` otherwise). Money
 | `POST` | `/api/direct-settle` | Record a direct settlement |
 | `GET` | `/api/dashboard` | Cross-group + direct summary |
 
+**Friends**
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/api/friends` | List caller's friends |
+| `DELETE` | `/api/friends/[friendId]` | Remove friendship (both directions) |
+| `GET` `POST` | `/api/friends/invite` | Get / regenerate personal friend-invite link |
+| `GET` | `/api/friend-invite/[token]` | Public preview (inviter name, expiry) |
+| `POST` | `/api/friend-invite/[token]` | Accept invite — creates mutual friendship |
+
+**Admin** _(admin only)_
+| Method | Path | Purpose |
+|---|---|---|
+| `GET` | `/api/admin/users` | List all users (with group memberships + expense count) |
+| `PATCH` | `/api/admin/users` | Ban / unban / promote / demote / edit profile / delete user |
+
 ---
 
 ## Data model
 
 Key Prisma models (`prisma/schema.prisma`):
 
-- **User** — credentials account; relations to memberships, expenses paid, splits, settlements,
-  direct participations.
+- **User** — credentials account; `username` (unique, lowercase); `usernameChangedAt` for cooldown
+  enforcement; `isAdmin` / `isBanned` flags; relations to memberships, expenses, splits,
+  settlements, direct participations, friendships, and friend invites.
 - **Group** / **GroupMember** (role) / **GroupInvite** (token, expiry, single-use).
 - **Expense** — `groupId` **nullable** (null = direct), `amount Decimal(12,2)`, `category`,
   `splitType`, `receiptUrl`, soft-delete `deletedAt`.
 - **ExpenseSplit** — per-user share of an expense.
 - **DirectParticipant** — participants of a direct (non-group) expense.
 - **Settlement** — `groupId` **nullable** (null = direct settlement), sender → receiver, amount.
+- **Friendship** — bidirectional stored as 2 rows (`@@unique([userId, friendId])`); simple
+  `WHERE userId = me` queries, no UNION needed.
+- **FriendInvite** — reusable personal invite token (`xxxx-xxxx-xxxx-xxxx`), 30-day expiry, one
+  active link per user (regenerate replaces the old one).
 
 Money is `Decimal(12,2)`; all split math runs in integer cents.
 
@@ -353,26 +418,29 @@ Money is `Decimal(12,2)`; all split math runs in integer cents.
 
 ```
 app/
-  (auth)/login, /register          # auth pages (server) + client forms
-  (app)/dashboard                  # cross-group + direct summary
-  (app)/groups, /groups/[groupId]  # group list, detail, settings
-  (app)/balances, /balances/[userId]  # global + per-person balances
-  (app)/profile                    # account settings
-  (app)/layout.tsx                 # app shell (sidebar/mobile nav, FAB, theme)
-  invite/[token]                   # invite acceptance
-  api/                             # see API reference above
+  (auth)/login, /register              # auth pages (server) + client forms
+  (app)/dashboard                      # cross-group + direct summary
+  (app)/groups, /groups/[groupId]      # group list, detail, settings
+  (app)/balances, /balances/[userId]   # global + per-person balances
+  (app)/friends                        # friends list + invite link
+  (app)/profile                        # account settings (name, username, password, theme)
+  (app)/admin                          # admin panel (admin-only)
+  (app)/layout.tsx                     # app shell (sidebar/mobile nav, FAB, theme)
+  invite/[token]                       # group invite acceptance
+  friend-invite/[token]                # friend invite acceptance (public preview + auth accept)
+  api/                                 # see API reference above
 components/
-  auth/ groups/ expenses/ balances/ dashboard/ profile/ fab/ nlp/ ui/
+  auth/ groups/ expenses/ balances/ dashboard/ profile/ friends/ admin/ fab/ nlp/ ui/
 lib/
   auth.config.ts auth.ts prisma.ts env.ts logger.ts ids.ts rate-limit.ts
   splitEngine.ts balances.ts globalBalances.ts dashboard.ts directExpenses.ts
   expense-shape.ts uploads.ts categories.ts format.ts anthropic.ts
 prisma/
   schema.prisma  migrations/
-scripts/                           # test harnesses, icon + rekey utilities
-middleware.ts                      # auth + rate limiting + security logging
-next.config.js                     # PWA wrap + security headers
-Dockerfile  docker-compose.yml     # containerized deploy
+scripts/                               # test harnesses, icon + rekey utilities
+middleware.ts                          # auth + rate limiting + security logging
+next.config.js                         # PWA wrap + security headers
+Dockerfile  docker-compose.yml         # containerized deploy
 ```
 
 ---
