@@ -33,13 +33,17 @@ enum ExpenseCategory {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  name         String
-  email        String   @unique
-  passwordHash String
-  avatar       String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                  String    @id @default(cuid())
+  name                String
+  email               String    @unique
+  username            String?   @unique
+  usernameChangedAt   DateTime?
+  passwordHash        String
+  avatar              String?
+  isAdmin             Boolean   @default(false)
+  isBanned            Boolean   @default(false)
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   memberships         GroupMember[]
   invitesSent         GroupInvite[]       @relation("InvitedBy")

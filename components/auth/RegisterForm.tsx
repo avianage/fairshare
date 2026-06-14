@@ -21,6 +21,11 @@ import {
 
 const registerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
+  username: z
+    .string()
+    .min(3, "Username must be at least 3 characters")
+    .max(20, "Username must be at most 20 characters")
+    .regex(/^[a-zA-Z0-9_]+$/, "Only letters, numbers, and underscores"),
   email: z.string().email("Enter a valid email"),
   password: z
     .string()
@@ -159,6 +164,26 @@ export function RegisterForm({
             {errors.name && (
               <p className="text-xs text-destructive">{errors.name.message}</p>
             )}
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="username">Username</Label>
+            <div className="relative">
+              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground text-sm">@</span>
+              <Input
+                id="username"
+                type="text"
+                placeholder="yourname"
+                autoComplete="username"
+                className="pl-7"
+                aria-invalid={!!errors.username}
+                {...register("username")}
+              />
+            </div>
+            {errors.username && (
+              <p className="text-xs text-destructive">{errors.username.message}</p>
+            )}
+            <p className="text-xs text-muted-foreground">Can be changed once every 30 days</p>
           </div>
 
           <div className="space-y-1.5">

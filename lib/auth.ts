@@ -39,19 +39,22 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
             name: true,
             email: true,
             passwordHash: true,
+            isAdmin: true,
+            isBanned: true,
           },
         })
 
         if (!user) return null
+        if (user.isBanned) return null
 
         const passwordMatch = await bcrypt.compare(password, user.passwordHash)
         if (!passwordMatch) return null
 
-        // Never return passwordHash — only safe fields
         return {
           id: user.id,
           name: user.name,
           email: user.email,
+          isAdmin: user.isAdmin,
         }
       },
     }),

@@ -2,23 +2,26 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, Users, Scale, User } from "lucide-react"
+import { LayoutDashboard, Users, Scale, User, ShieldCheck } from "lucide-react"
 import { cn } from "@/lib/utils"
 
-const links = [
+const baseLinks = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/groups", label: "Groups", icon: Users },
   { href: "/balances", label: "Balances", icon: Scale },
   { href: "/profile", label: "Profile", icon: User },
 ]
 
+const adminLink = { href: "/admin", label: "Admin", icon: ShieldCheck }
+
 function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(href + "/")
 }
 
 /** Vertical nav for the desktop sidebar. */
-export function SidebarNav() {
+export function SidebarNav({ showAdmin }: { showAdmin?: boolean }) {
   const pathname = usePathname()
+  const links = showAdmin ? [...baseLinks, adminLink] : baseLinks
   return (
     <nav className="flex-1 space-y-1 p-3 text-sm">
       {links.map(({ href, label, icon: Icon }) => {
@@ -44,8 +47,9 @@ export function SidebarNav() {
 }
 
 /** Horizontal bottom nav for mobile screens. */
-export function MobileNav() {
+export function MobileNav({ showAdmin }: { showAdmin?: boolean }) {
   const pathname = usePathname()
+  const links = showAdmin ? [...baseLinks, adminLink] : baseLinks
   return (
     <nav
       className="fixed bottom-0 left-0 right-0 z-40 flex items-center justify-around border-t border-border bg-background/80 backdrop-blur-lg px-6 md:hidden"

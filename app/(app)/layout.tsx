@@ -28,7 +28,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           />
           <span className="text-lg font-semibold tracking-tight">Fairshare</span>
         </div>
-        <SidebarNav />
+        <SidebarNav showAdmin={session.user.isAdmin} />
         <div className="border-t p-3">
           <Link
             href="/profile"
@@ -77,7 +77,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </main>
 
         {/* Mobile nav row */}
-        <MobileNav />
+        <MobileNav showAdmin={session.user.isAdmin} />
       </div>
 
       {/* Persistent floating add-expense button (authenticated pages only) */}

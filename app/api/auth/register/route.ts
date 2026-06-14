@@ -5,6 +5,11 @@ import { prisma } from "@/lib/prisma"
 
 const registerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
+  username: z
+    .string()
+    .min(3, "Username must be at least 3 characters")
+    .max(20, "Username must be at most 20 characters")
+    .regex(/^[a-zA-Z0-9_]+$/, "Username can only contain letters, numbers, and underscores"),
   email: z.string().email("Invalid email address"),
   password: z
     .string()
@@ -66,16 +71,23 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const { name, email, password } = parsed.data
+  const { name, username, email, password } = parsed.data
 
-  const existing = await prisma.user.findUnique({
-    where: { email },
-    select: { id: true },
-  })
+  const [existingEmail, existingUsername] = await Promise.all([
+    prisma.user.findUnique({ where: { email }, select: { id: true } }),
+    prisma.user.findUnique({ where: { username }, select: { id: true } }),
+  ])
 
-  if (existing) {
+  if (existingEmail) {
     return NextResponse.json(
       { error: "An account with this email already exists" },
+      { status: 409 }
+    )
+  }
+
+  if (existingUsername) {
+    return NextResponse.json(
+      { error: "This username is already taken" },
       { status: 409 }
     )
   }
@@ -83,8 +95,8 @@ export async function POST(request: NextRequest) {
   const passwordHash = await bcrypt.hash(password, 12)
 
   const user = await prisma.user.create({
-    data: { name, email, passwordHash },
-    select: { id: true, name: true, email: true }, // never return passwordHash
+    data: { name, username, email, passwordHash },
+    select: { id: true, name: true, username: true, email: true },
   })
 
   return NextResponse.json(user, { status: 201 })

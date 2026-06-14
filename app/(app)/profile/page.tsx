@@ -12,10 +12,14 @@ export default async function ProfilePage() {
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { id: true, name: true, email: true, createdAt: true }, // never passwordHash
+    select: { id: true, name: true, username: true, email: true, createdAt: true, usernameChangedAt: true },
   })
 
   if (!user) redirect("/login")
+
+  const usernameNextChangeAt = user.usernameChangedAt
+    ? new Date(user.usernameChangedAt.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString()
+    : null
 
   return (
     <div className="mx-auto max-w-2xl space-y-8">
@@ -28,8 +32,10 @@ export default async function ProfilePage() {
 
       <ProfileForm
         defaultName={user.name}
+        defaultUsername={user.username ?? ""}
         email={user.email}
         memberSince={user.createdAt.toISOString()}
+        usernameNextChangeAt={usernameNextChangeAt}
       />
 
       <PasswordForm />
