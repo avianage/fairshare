@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { ForbiddenError, requireGroupMember } from "@/lib/auth-helpers"
 import { computeGroupBalances } from "@/lib/balances"
+import { sendPushToUsers } from "@/lib/push"
 
 type Params = { params: { groupId: string } }
 
@@ -118,6 +119,13 @@ export async function POST(request: NextRequest, { params }: Params) {
       sender: { select: { id: true, name: true } },
       receiver: { select: { id: true, name: true } },
     },
+  })
+
+  const group = await prisma.group.findUnique({ where: { id: params.groupId }, select: { name: true } })
+  void sendPushToUsers([receiverId], {
+    title: `${settlement.sender.name} paid you`,
+    body: `₹${amount.toFixed(2)} in ${group?.name ?? "a group"}`,
+    url: `/balances`,
   })
 
   return NextResponse.json(

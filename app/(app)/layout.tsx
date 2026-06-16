@@ -3,6 +3,7 @@ import Link from "next/link"
 import { auth } from "@/lib/auth"
 import { SignOutButton } from "@/components/SignOutButton"
 import { ThemeToggle } from "@/components/ThemeToggle"
+import { PushSubscriber } from "@/components/PushSubscriber"
 import { SidebarNav, MobileNav } from "@/components/AppNav"
 import { AddExpenseFAB } from "@/components/fab/AddExpenseFAB"
 
@@ -66,6 +67,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <span className="hidden text-sm text-muted-foreground sm:inline">
               {session.user.name}
             </span>
+            <PushSubscriber />
             <ThemeToggle />
             <SignOutButton />
           </div>

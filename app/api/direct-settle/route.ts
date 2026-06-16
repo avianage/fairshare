@@ -5,6 +5,7 @@ import { revalidateTag } from "next/cache"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { getPairwiseBalance } from "@/lib/globalBalances"
+import { sendPushToUsers } from "@/lib/push"
 
 export const runtime = "nodejs"
 
@@ -100,6 +101,12 @@ export async function POST(request: NextRequest) {
   // Both parties' cached global balances are now stale.
   revalidateTag(`global-debts:${senderId}`)
   revalidateTag(`global-debts:${toUserId}`)
+
+  void sendPushToUsers([toUserId], {
+    title: `${settlement.sender.name} paid you`,
+    body: `₹${amount.toFixed(2)} (direct payment)`,
+    url: `/balances`,
+  })
 
   return NextResponse.json(
     { settlement: { ...settlement, amount: settlement.amount.toNumber() } },

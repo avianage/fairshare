@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma"
 import { ForbiddenError, requireGroupMember } from "@/lib/auth-helpers"
 import { calculateSplits } from "@/lib/splitEngine"
 import { expenseInclude, serializeExpense } from "@/lib/expense-shape"
+import { sendPushToUsers } from "@/lib/push"
 
 type Params = { params: { groupId: string } }
 
@@ -252,6 +253,16 @@ export async function POST(request: NextRequest, { params }: Params) {
       data: { updatedAt: new Date() },
     })
     return created
+  })
+
+  // Fire-and-forget push to all participants except the payer
+  const group = await prisma.group.findUnique({ where: { id: params.groupId }, select: { name: true } })
+  const recipientIds = uniqueMemberIds.filter((id) => id !== payerId)
+  const payerName = (await prisma.user.findUnique({ where: { id: payerId }, select: { name: true } }))?.name ?? "Someone"
+  void sendPushToUsers(recipientIds, {
+    title: `${payerName} added an expense`,
+    body: `"${description}" · ₹${amount.toFixed(2)} in ${group?.name ?? "a group"}`,
+    url: `/groups/${params.groupId}`,
   })
 
   return NextResponse.json({ expense: serializeExpense(expense) }, { status: 201 })

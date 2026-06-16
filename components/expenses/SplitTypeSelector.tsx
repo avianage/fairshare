@@ -9,6 +9,8 @@ type Member = { id: string; name: string }
 export type SplitState = {
   splitType: SplitType
   values: Record<string, number>
+  /** Only set when splitType === "EQUAL" and a subset of members is selected. */
+  equalMemberIds?: string[]
   /** True when the current allocation is valid for submission. */
   valid: boolean
 }
@@ -38,6 +40,9 @@ export function SplitTypeSelector({
   onChange: (state: SplitState) => void
 }) {
   const [splitType, setSplitType] = useState<SplitType>("EQUAL")
+  const [equalSelected, setEqualSelected] = useState<Set<string>>(
+    () => new Set(members.map((m) => m.id))
+  )
   // Raw string inputs keyed by member id (one map per type).
   const [exact, setExact] = useState<Record<string, string>>({})
   const [pct, setPct] = useState<Record<string, string>>({})
@@ -61,6 +66,12 @@ export function SplitTypeSelector({
       const allPresent = members.every((m) => prev[m.id] !== undefined)
       return sameSize && allPresent ? prev : next
     })
+    // Add new members to the equal selection automatically
+    setEqualSelected((prev) => {
+      const next = new Set(prev)
+      for (const m of members) next.add(m.id)
+      return next
+    })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [memberKey])
 
@@ -76,7 +87,15 @@ export function SplitTypeSelector({
 
     if (splitType === "EQUAL") {
       values = {}
-      valid = members.length > 0
+      const selected = members.filter((m) => equalSelected.has(m.id))
+      valid = selected.length > 0
+      onChange({
+        splitType,
+        values,
+        equalMemberIds: selected.map((m) => m.id),
+        valid,
+      })
+      return
     } else if (splitType === "EXACT") {
       values = Object.fromEntries(members.map((m) => [m.id, num(exact[m.id])]))
       valid = amount > 0 && Math.abs(exactTotal - amount) <= 0.01
@@ -96,7 +115,7 @@ export function SplitTypeSelector({
 
     onChange({ splitType, values, valid })
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [splitType, amount, exactTotal, pctTotal, sharesTotal, JSON.stringify(exact), JSON.stringify(pct), JSON.stringify(shares)])
+  }, [splitType, amount, exactTotal, pctTotal, sharesTotal, JSON.stringify(exact), JSON.stringify(pct), JSON.stringify(shares), JSON.stringify([...equalSelected])])
 
   const exactRemaining = Math.round((amount - exactTotal) * 100) / 100
   const pctRemaining = Math.round((100 - pctTotal) * 100) / 100
@@ -122,16 +141,45 @@ export function SplitTypeSelector({
       </div>
 
       {splitType === "EQUAL" && (
-        <p className="rounded-md border border-primary/20 bg-accent px-3 py-2 text-sm text-accent-foreground">
-          Split equally among {members.length}{" "}
-          {members.length === 1 ? "person" : "people"}
-          {amount > 0 && (
-            <span className="font-medium">
-              {" "}
-              · {money(amount / members.length)} each
-            </span>
+        <div className="space-y-2">
+          {members.map((m) => {
+            const checked = equalSelected.has(m.id)
+            const selectedCount = members.filter((x) => equalSelected.has(x.id)).length
+            const perPerson = selectedCount > 0 && amount > 0 ? amount / selectedCount : 0
+            return (
+              <label
+                key={m.id}
+                className="flex cursor-pointer items-center gap-3 rounded-md border px-3 py-2 text-sm transition-colors hover:bg-accent/40"
+              >
+                <input
+                  type="checkbox"
+                  checked={checked}
+                  onChange={() => {
+                    setEqualSelected((prev) => {
+                      const next = new Set(prev)
+                      if (checked) {
+                        if (next.size > 1) next.delete(m.id)
+                      } else {
+                        next.add(m.id)
+                      }
+                      return next
+                    })
+                  }}
+                  className="h-4 w-4 rounded accent-primary"
+                />
+                <span className="flex-1 truncate">{m.name}</span>
+                {checked && amount > 0 && (
+                  <span className="shrink-0 font-medium text-primary">
+                    {money(perPerson)}
+                  </span>
+                )}
+              </label>
+            )
+          })}
+          {members.filter((m) => equalSelected.has(m.id)).length === 0 && (
+            <p className="text-xs text-destructive">Select at least one person.</p>
           )}
-        </p>
+        </div>
       )}
 
       {splitType === "EXACT" && (

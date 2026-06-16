@@ -85,6 +85,10 @@ export function ExpenseForm({
           splitType: split.splitType,
           // Server recomputes the split from these values — never trusted as-is.
           ...(split.splitType !== "EQUAL" ? { values: split.values } : {}),
+          // For EQUAL splits, only send memberIds if a subset was selected.
+          ...(split.splitType === "EQUAL" && split.equalMemberIds && split.equalMemberIds.length < members.length
+            ? { memberIds: split.equalMemberIds }
+            : {}),
         }),
       })
 

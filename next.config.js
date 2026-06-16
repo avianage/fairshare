@@ -40,6 +40,7 @@ const nextConfig = {
 
 const withPWA = require("next-pwa")({
   dest: "public",
+  customWorkerDir: "worker",
   // PWA is now ON in dev too (so you can test install locally). The service
   // worker caches aggressively — if stale assets get annoying while coding, set
   // DISABLE_PWA=true in your env to turn it back off for `next dev`.

@@ -92,7 +92,9 @@ export function DirectExpenseForm({
           description: description.trim(),
           amount: Math.round(amountNum * 100) / 100,
           payerId,
-          participantIds: participants.map((p) => p.id),
+          participantIds: split.splitType === "EQUAL" && split.equalMemberIds && split.equalMemberIds.length < participants.length
+            ? split.equalMemberIds
+            : participants.map((p) => p.id),
           splitType: split.splitType,
           date: new Date(date).toISOString(),
           ...(split.splitType !== "EQUAL" ? { values: split.values } : {}),
