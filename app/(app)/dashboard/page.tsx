@@ -16,7 +16,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <div>
+      <div className="hidden md:block">
         <h1 className="text-2xl font-semibold">Dashboard</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Your balances across all groups.

@@ -2,12 +2,12 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { X, Users, User, Globe, ChevronLeft } from "lucide-react"
+import { X, Users, User, Globe, ChevronLeft, Wallet } from "lucide-react"
 import { ExpenseForm } from "@/components/expenses/ExpenseForm"
 import { DirectExpenseForm } from "@/components/fab/DirectExpenseForm"
 import { cn } from "@/lib/utils"
 
-type Mode = "choose" | "group" | "person" | "anyone"
+type Mode = "choose" | "group" | "person" | "anyone" | "solo"
 type Member = { id: string; name: string }
 type GroupOption = { id: string; name: string; emoji: string | null }
 
@@ -141,6 +141,12 @@ export function AddExpenseModal({
                   description="Split with several people, no group"
                   onClick={() => setMode("anyone")}
                 />
+                <OptionCard
+                  icon={<Wallet className="h-5 w-5" />}
+                  title="Just me"
+                  description="A personal expense only you owe"
+                  onClick={() => setMode("solo")}
+                />
               </div>
             </div>
           )}
@@ -192,6 +198,15 @@ export function AddExpenseModal({
             <DirectExpenseForm
               currentUser={currentUser}
               mode={mode}
+              onSuccess={done}
+              onCancel={onClose}
+            />
+          )}
+
+          {mode === "solo" && (
+            <DirectExpenseForm
+              currentUser={currentUser}
+              mode="solo"
               onSuccess={done}
               onCancel={onClose}
             />

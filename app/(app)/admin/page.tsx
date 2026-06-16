@@ -11,7 +11,7 @@ export default async function AdminPage() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="hidden md:block">
         <h1 className="text-2xl font-semibold">Admin</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           User management and monitoring.

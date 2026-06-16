@@ -21,6 +21,7 @@ export type DashboardData = {
     description: string
     amount: number
     date: Date
+    category?: string
     involvedUsers: { name: string }[]
   }[]
 }
@@ -84,6 +85,7 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
             description: true,
             amount: true,
             date: true,
+            category: true,
             group: { select: { name: true } },
             payer: { select: { name: true } },
             splits: { select: { user: { select: { name: true } } } },
@@ -113,6 +115,7 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
         description: true,
         amount: true,
         date: true,
+        category: true,
         payer: { select: { name: true } },
         splits: { select: { user: { select: { name: true } } } },
       },
@@ -136,11 +139,11 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
   const recentActivity: DashboardData["recentActivity"] = [
     ...expenses.map((e) => ({
       type: "expense" as const,
-      // These rows are group-scoped (filtered by groupId), so group is present.
       groupName: e.group?.name ?? "",
       description: e.description,
       amount: e.amount.toNumber(),
       date: e.date,
+      category: e.category,
       involvedUsers: [
         { name: e.payer.name },
         ...e.splits.map((s) => ({ name: s.user.name })),
@@ -152,6 +155,7 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
       description: e.description,
       amount: e.amount.toNumber(),
       date: e.date,
+      category: e.category,
       involvedUsers: [
         { name: e.payer.name },
         ...e.splits.map((s) => ({ name: s.user.name })),

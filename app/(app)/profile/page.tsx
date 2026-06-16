@@ -23,7 +23,7 @@ export default async function ProfilePage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-8">
-      <div>
+      <div className="hidden md:block">
         <h1 className="text-2xl font-semibold">Profile</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Manage your account details and password.

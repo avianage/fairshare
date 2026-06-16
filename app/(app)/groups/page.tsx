@@ -30,13 +30,13 @@ export default async function GroupsPage() {
   return (
     <div>
       <div className="mb-6 flex items-center justify-between">
-        <div>
+        <div className="hidden md:block">
           <h1 className="text-2xl font-semibold">Groups</h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Groups you share expenses with.
           </p>
         </div>
-        <Button asChild>
+        <Button asChild className="md:ml-0 ml-auto">
           <Link href="/groups/new">New group</Link>
         </Button>
       </div>

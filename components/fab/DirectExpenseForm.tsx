@@ -38,7 +38,7 @@ export function DirectExpenseForm({
   onCancel,
 }: {
   currentUser: { id: string; name: string }
-  mode: "person" | "anyone"
+  mode: "person" | "anyone" | "solo"
   initial?: DirectExpenseInitial
   onSuccess?: () => void
   onCancel?: () => void
@@ -58,11 +58,12 @@ export function DirectExpenseForm({
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const participants = [{ id: currentUser.id, name: `${currentUser.name} (you)` }, ...others]
+  const isSolo = mode === "solo"
+  const participants = [{ id: currentUser.id, name: isSolo ? currentUser.name : `${currentUser.name} (you)` }, ...others]
   const amountNum = Number(amount)
   const validAmount = amountNum > 0 && amountNum <= 999999.99
   const canSubmit =
-    others.length >= 1 && description.trim() && validAmount && split.valid && !submitting
+    (isSolo || others.length >= 1) && description.trim() && validAmount && split.valid && !submitting
 
   const selectClass =
     "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
@@ -70,7 +71,7 @@ export function DirectExpenseForm({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
-    if (others.length === 0) {
+    if (!isSolo && others.length === 0) {
       setError("Add at least one other person.")
       return
     }
@@ -119,16 +120,18 @@ export function DirectExpenseForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div className="space-y-2">
-        <Label>{mode === "person" ? "With" : "Participants"}</Label>
-        <UserSearch
-          selected={others}
-          onChange={setOthers}
-          multi={mode === "anyone"}
-          excludeIds={[currentUser.id]}
-          showSuggestions
-        />
-      </div>
+      {!isSolo && (
+        <div className="space-y-2">
+          <Label>{mode === "person" ? "With" : "Participants"}</Label>
+          <UserSearch
+            selected={others}
+            onChange={setOthers}
+            multi={mode === "anyone"}
+            excludeIds={[currentUser.id]}
+            showSuggestions
+          />
+        </div>
+      )}
 
       <div className="space-y-2">
         <Label htmlFor="d-desc">Description</Label>
@@ -158,21 +161,23 @@ export function DirectExpenseForm({
             required
           />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="d-payer">Paid by</Label>
-          <select
-            id="d-payer"
-            value={payerId}
-            onChange={(e) => setPayerId(e.target.value)}
-            className={selectClass}
-          >
-            {participants.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.name}
-              </option>
-            ))}
-          </select>
-        </div>
+        {!isSolo && (
+          <div className="space-y-2">
+            <Label htmlFor="d-payer">Paid by</Label>
+            <select
+              id="d-payer"
+              value={payerId}
+              onChange={(e) => setPayerId(e.target.value)}
+              className={selectClass}
+            >
+              {participants.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       <div className="space-y-2">
@@ -186,7 +191,7 @@ export function DirectExpenseForm({
         />
       </div>
 
-      {others.length >= 1 && (
+      {!isSolo && others.length >= 1 && (
         <div className="space-y-2">
           <Label>Split</Label>
           <SplitTypeSelector

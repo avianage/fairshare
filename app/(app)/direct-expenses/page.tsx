@@ -25,7 +25,7 @@ export default async function DirectExpensesPage() {
 
   return (
     <div>
-      <div className="mb-6">
+      <div className="mb-6 hidden md:block">
         <h1 className="text-2xl font-semibold">Non-group expenses</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Individual expenses between you and others, not tied to any group.

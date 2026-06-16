@@ -7,6 +7,7 @@ type Activity = {
   description: string
   amount: number
   date: string | Date
+  category?: string
   involvedUsers: { name: string }[]
 }
 
@@ -41,7 +42,7 @@ export function ActivityFeed({ activity }: { activity: Activity[] }) {
               <span className={`relative z-10 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-base transition-all duration-300 group-hover:scale-110 shadow-sm ${
                 isSettlement ? "bg-success/15 border border-success/30 text-success" : "bg-primary/10 border border-primary/20 text-primary"
               }`}>
-                {isSettlement ? "💸" : categoryMeta("OTHER").icon}
+                {isSettlement ? "💸" : categoryMeta(a.category ?? "OTHER").icon}
               </span>
               
               <div className="min-w-0 flex-1 pt-0.5">

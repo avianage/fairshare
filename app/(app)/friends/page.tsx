@@ -25,7 +25,7 @@ export default async function FriendsPage() {
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
-      <div>
+      <div className="hidden md:block">
         <h1 className="text-2xl font-semibold">Friends</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Friends can be added to direct expenses without needing a shared group.

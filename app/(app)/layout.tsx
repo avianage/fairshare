@@ -6,6 +6,7 @@ import { ThemeToggle } from "@/components/ThemeToggle"
 import { PushSubscriber } from "@/components/PushSubscriber"
 import { SidebarNav, MobileNav } from "@/components/AppNav"
 import { AddExpenseFAB } from "@/components/fab/AddExpenseFAB"
+import { MobilePageTitle } from "@/components/MobilePageTitle"
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -53,18 +54,20 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       {/* Main column */}
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Top bar */}
-        <header className="flex h-16 shrink-0 items-center justify-between gap-3 border-b bg-card/80 px-4 backdrop-blur supports-[backdrop-filter]:bg-card/60 sm:px-6">
-          <span className="flex items-center gap-2 text-lg font-semibold md:hidden">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/icon.png"
-              alt="Fairshare Logo"
-              className="h-7 w-7 rounded-lg object-contain"
-            />
-            Fairshare
-          </span>
-          <div className="ml-auto flex items-center gap-2 sm:gap-3">
-            <span className="hidden text-sm text-muted-foreground sm:inline">
+        <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b bg-card/80 px-4 backdrop-blur supports-[backdrop-filter]:bg-card/60 sm:px-6">
+          {/* Mobile: avatar linking to profile + dynamic page title */}
+          <div className="flex items-center gap-2.5 md:hidden">
+            <Link
+              href="/profile"
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15 text-sm font-bold text-primary border border-primary/20"
+              aria-label="Profile"
+            >
+              {initial}
+            </Link>
+            <MobilePageTitle />
+          </div>
+          <div className="flex items-center gap-2 sm:gap-3 md:ml-auto">
+            <span className="hidden text-sm text-muted-foreground md:inline">
               {session.user.name}
             </span>
             <PushSubscriber />
@@ -74,12 +77,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         </header>
 
         {/* Page content */}
-        <main className="flex-1 overflow-y-auto overflow-x-hidden px-4 pt-4 pb-[calc(6rem+env(safe-area-inset-bottom))] sm:px-6 sm:pt-6 sm:pb-[calc(6rem+env(safe-area-inset-bottom))] md:p-6 lg:p-8">
+        <main className="flex-1 overflow-y-auto overflow-x-hidden px-3 pt-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:px-5 sm:pt-5 sm:pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:p-6 lg:p-8">
           <div className="mx-auto w-full max-w-5xl">{children}</div>
         </main>
 
         {/* Mobile nav row */}
-        <MobileNav showAdmin={session.user.isAdmin} />
+        <MobileNav
+          showAdmin={session.user.isAdmin}
+          currentUser={{ id: session.user.id, name: session.user.name ?? "You" }}
+        />
       </div>
 
       {/* Persistent floating add-expense button (authenticated pages only) */}

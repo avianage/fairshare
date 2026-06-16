@@ -56,6 +56,7 @@ model User {
   friendOf            Friendship[]        @relation("FriendshipFriend")
   friendInvitesSent   FriendInvite[]      @relation("FriendInviteOwner")
   pushSubscriptions   PushSubscription[]
+  budgets             Budget[]
 }
 
 model Group {
@@ -216,5 +217,19 @@ model PushSubscription {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
+}
+
+model Budget {
+  id        String          @id @default(cuid())
+  userId    String
+  category  ExpenseCategory
+  amount    Decimal         @db.Decimal(12, 2)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, category])
   @@index([userId])
 }
