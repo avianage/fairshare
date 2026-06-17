@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1
-
 # ── deps ─────────────────────────────────────────────────────────────────────
 # Install all dependencies (incl. dev) needed to build and to run migrations.
 FROM node:20-slim AS deps
@@ -11,9 +9,7 @@ COPY package.json package-lock.json ./
 # Prefer IPv4 — the host has no IPv6 default route.
 # --ignore-scripts skips the @prisma/engines postinstall which
 # downloads a binary and often fails on this host's network.
-RUN npm config set fetch-retries 5 && npm config set fetch-retry-mintimeout 10000 \
-  && npm config set fetch-retry-maxtimeout 120000 && npm config set maxsockets 2 \
-  && npm ci --ignore-scripts
+COPY node_modules ./node_modules
 
 # ── builder ──────────────────────────────────────────────────────────────────
 FROM node:20-slim AS builder
