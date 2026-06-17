@@ -8,6 +8,7 @@ import { categoryMeta } from "@/lib/categories"
 import { formatMoney, formatRelativeTime } from "@/lib/format"
 import { EXPENSE_CATEGORIES } from "@/lib/categories"
 import { ReceiptManager } from "@/components/expenses/ReceiptManager"
+import { NativeSelect } from "@/components/ui/native-select"
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -27,8 +28,6 @@ export type Expense = {
   splits: ExpenseSplit[]
 }
 
-const selectClass =
-  "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
 
 function EditExpenseForm({
   expense,
@@ -111,18 +110,17 @@ function EditExpenseForm({
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="edit-category" className="text-xs">Category</Label>
-          <select
+          <NativeSelect
             id="edit-category"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className={selectClass}
           >
             {EXPENSE_CATEGORIES.map((c) => (
               <option key={c.value} value={c.value}>
                 {c.icon} {c.label}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
       </div>
 
