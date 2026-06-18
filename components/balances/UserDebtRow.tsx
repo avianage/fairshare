@@ -23,28 +23,30 @@ export type UserDebtRowProps = {
 
 export function UserDebtRow({ userId, name, avatar, amount, tone }: UserDebtRowProps) {
   return (
-    <Link
-      href={`/balances/${userId}`}
-      className="flex items-center gap-3 rounded-xl border bg-card p-3 shadow-sm transition-colors hover:border-primary/40 hover:bg-accent/40"
-    >
-      <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-sm font-semibold text-primary">
-        {avatar ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={avatar} alt="" className="h-full w-full object-cover" />
-        ) : (
-          initials(name)
-        )}
-      </span>
-      <span className="min-w-0 flex-1 truncate font-medium">{name}</span>
-      <span
-        className={cn(
-          "shrink-0 font-semibold tabular-nums",
-          tone === "owed" ? "text-success" : "text-warning"
-        )}
+    <div className="flex items-center gap-2 rounded-xl border bg-card shadow-sm transition-colors hover:border-primary/40 hover:bg-accent/40">
+      <Link
+        href={`/balances/${userId}`}
+        className="flex flex-1 items-center gap-3 p-3 min-w-0"
       >
-        {formatINR(amount)}
-      </span>
-      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-    </Link>
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-sm font-semibold text-primary">
+          {avatar ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={avatar} alt="" className="h-full w-full object-cover" />
+          ) : (
+            initials(name)
+          )}
+        </span>
+        <span className="min-w-0 flex-1 truncate font-medium">{name}</span>
+        <span
+          className={cn(
+            "shrink-0 font-semibold tabular-nums",
+            tone === "owed" ? "text-success" : "text-warning"
+          )}
+        >
+          {formatINR(amount)}
+        </span>
+        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
+      </Link>
+    </div>
   )
 }

@@ -25,7 +25,6 @@ export function ActivityFeed({ activity }: { activity: Activity[] }) {
 
   return (
     <div className="relative border bg-card/65 backdrop-blur-md rounded-xl p-5 shadow-sm overflow-hidden">
-      <div className="absolute top-8 bottom-8 left-9.5 w-0.5 bg-border/70 hidden md:block" />
       <ul className="space-y-6 relative z-10">
         {activity.map((a, i) => {
           const names = a.involvedUsers.map((u) => u.name)
