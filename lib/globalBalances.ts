@@ -1,6 +1,86 @@
 import { prisma } from "@/lib/prisma"
 import { directExpenseVisibilityWhere } from "@/lib/directExpenses"
 
+export type ContextualDebt = {
+  groupId: string | null
+  groupName: string | null // null = direct expenses
+  amount: number           // positive = userId owes counterpartyId in this context
+}
+
+/**
+ * Per-context (per-group + direct) bilateral net between two users.
+ * Only returns contexts with a meaningful balance (≥ ₹0.01).
+ * Positive amount = userId owes counterpartyId.
+ * Negative amount = counterpartyId owes userId.
+ */
+export async function getContextualDebts(
+  userId: string,
+  counterpartyId: string
+): Promise<ContextualDebt[]> {
+  const [expenses, settlements] = await Promise.all([
+    prisma.expense.findMany({
+      where: {
+        deletedAt: null,
+        AND: [
+          { splits: { some: { userId } } },
+          { splits: { some: { userId: counterpartyId } } },
+        ],
+      },
+      select: {
+        groupId: true,
+        group: { select: { name: true } },
+        payerId: true,
+        splits: {
+          where: { userId: { in: [userId, counterpartyId] } },
+          select: { userId: true, amount: true },
+        },
+      },
+    }),
+    prisma.settlement.findMany({
+      where: {
+        senderId: { in: [userId, counterpartyId] },
+        receiverId: { in: [userId, counterpartyId] },
+      },
+      select: { senderId: true, receiverId: true, amount: true, groupId: true },
+    }),
+  ])
+
+  const nets = new Map<string | null, number>()
+  const groupNames = new Map<string | null, string | null>()
+  const bump = (key: string | null, delta: number) =>
+    nets.set(key, (nets.get(key) ?? 0) + delta)
+
+  for (const e of expenses) {
+    const key = e.groupId
+    if (!groupNames.has(key)) groupNames.set(key, e.group?.name ?? null)
+    const userSplit = e.splits.find((s) => s.userId === userId)
+    const cpSplit = e.splits.find((s) => s.userId === counterpartyId)
+    if (e.payerId === counterpartyId && userSplit) bump(key, Number(userSplit.amount))
+    else if (e.payerId === userId && cpSplit) bump(key, -Number(cpSplit.amount))
+  }
+
+  for (const s of settlements) {
+    const amt = Number(s.amount)
+    const key = s.groupId
+    if (s.senderId === userId && s.receiverId === counterpartyId) bump(key, -amt)
+    else if (s.senderId === counterpartyId && s.receiverId === userId) bump(key, amt)
+  }
+
+  const result: ContextualDebt[] = []
+  for (const [groupId, net] of nets.entries()) {
+    const rounded = Math.round(net * 100) / 100
+    if (Math.abs(rounded) < 0.01) continue
+    result.push({ groupId, groupName: groupNames.get(groupId) ?? null, amount: rounded })
+  }
+
+  // Direct first, then groups alphabetically
+  return result.sort((a, b) => {
+    if (a.groupId === null) return -1
+    if (b.groupId === null) return 1
+    return (a.groupName ?? "").localeCompare(b.groupName ?? "")
+  })
+}
+
 export type DebtUser = {
   userId: string
   name: string

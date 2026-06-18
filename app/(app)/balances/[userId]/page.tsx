@@ -5,7 +5,7 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { getPairwiseBalance } from "@/lib/globalBalances"
 import { formatINR, formatRelativeTime } from "@/lib/format"
-import { DirectSettleButton } from "@/components/balances/DirectSettleButton"
+import { PairwiseSettleButton } from "@/components/balances/PairwiseSettleButton"
 import { cn } from "@/lib/utils"
 
 export default async function PairwiseBalancePage({
@@ -69,11 +69,10 @@ export default async function PairwiseBalancePage({
                 : `You owe ${other.name} ${formatINR(-net)}`}
           </p>
         </div>
-        {owesDirect && (
-          <DirectSettleButton
-            toUserId={other.id}
-            toName={other.name}
-            amount={Math.round(-directNet * 100) / 100}
+        {!settled && !theyOwe && (
+          <PairwiseSettleButton
+            counterpartyId={other.id}
+            counterpartyName={other.name}
           />
         )}
       </div>

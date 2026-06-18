@@ -8,7 +8,6 @@ import { Pencil } from "lucide-react"
 import { categoryMeta } from "@/lib/categories"
 import { formatMoney, formatRelativeTime } from "@/lib/format"
 import { EXPENSE_CATEGORIES } from "@/lib/categories"
-import { ReceiptManager } from "@/components/expenses/ReceiptManager"
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -254,21 +253,12 @@ export function ExpenseCard({
             </p>
           )}
 
-          {groupId && (
-            <ReceiptManager
-              groupId={groupId}
-              expenseId={expense.id}
-              receiptUrl={expense.receiptUrl}
-              canManage={canManage}
-            />
-          )}
-
           {canManage && (
             <div className="mt-3 flex items-center justify-between border-t pt-3">
               <button
                 type="button"
                 onClick={() => setConfirmingDelete(true)}
-                className="text-xs text-muted-foreground hover:text-destructive"
+                className="rounded-md border border-destructive/50 px-2.5 py-1 text-xs font-medium text-destructive transition-colors hover:bg-destructive/10 hover:border-destructive"
               >
                 Delete expense
               </button>
