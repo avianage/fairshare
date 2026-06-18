@@ -64,6 +64,10 @@
   body {
     @apply bg-background text-foreground antialiased;
   }
+  select,
+  option {
+    font-family: inherit;
+  }
 }
 
 @layer utilities {

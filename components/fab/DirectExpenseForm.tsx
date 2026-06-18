@@ -5,6 +5,7 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { NativeSelect } from "@/components/ui/native-select"
 import { UserSearch, type SearchUser } from "@/components/fab/UserSearch"
 import {
   SplitTypeSelector,
@@ -64,9 +65,6 @@ export function DirectExpenseForm({
   const validAmount = amountNum > 0 && amountNum <= 999999.99
   const canSubmit =
     (isSolo || others.length >= 1) && description.trim() && validAmount && split.valid && !submitting
-
-  const selectClass =
-    "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -164,18 +162,17 @@ export function DirectExpenseForm({
         {!isSolo && (
           <div className="space-y-2">
             <Label htmlFor="d-payer">Paid by</Label>
-            <select
+            <NativeSelect
               id="d-payer"
               value={payerId}
               onChange={(e) => setPayerId(e.target.value)}
-              className={selectClass}
             >
               {participants.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name}
                 </option>
               ))}
-            </select>
+            </NativeSelect>
           </div>
         )}
       </div>
@@ -204,7 +201,7 @@ export function DirectExpenseForm({
 
       {error && <p className="text-sm text-destructive">{error}</p>}
 
-      <div className="flex gap-3">
+      <div className="sticky bottom-0 bg-card pt-2 flex gap-3">
         <Button type="submit" disabled={!canSubmit}>
           {submitting ? "Saving…" : "Add expense"}
         </Button>
