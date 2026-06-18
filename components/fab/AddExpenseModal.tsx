@@ -75,6 +75,11 @@ export function AddExpenseModal({
   function done() {
     onClose()
     router.refresh()
+    window.dispatchEvent(
+      new CustomEvent("fairshare:expense-changed", {
+        detail: { groupId },
+      })
+    )
   }
 
   const showBack = mode !== "choose" && !initialGroupId

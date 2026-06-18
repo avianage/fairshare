@@ -46,6 +46,8 @@ export function GroupExpenses({
   const [filteredTotal, setFilteredTotal] = useState<number>(initialTotal)
   const [loading, setLoading] = useState(false)
   const firstRun = useRef(true)
+  const filtersRef = useRef(filters)
+  filtersRef.current = filters
 
   const load = useCallback(
     async (f: ExpenseFilterState) => {
@@ -75,6 +77,23 @@ export function GroupExpenses({
     }
     load(filters)
   }, [filters, load])
+
+  // Refresh list when an expense is added/edited anywhere on this page.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { groupId: gid } = (e as CustomEvent).detail ?? {}
+      if (gid && gid !== groupId) return
+      load(filtersRef.current)
+    }
+    window.addEventListener("fairshare:expense-changed", handler)
+    return () => window.removeEventListener("fairshare:expense-changed", handler)
+  }, [groupId, load])
+
+  // Poll every 30 s so other users' new expenses appear without a manual refresh.
+  useEffect(() => {
+    const id = setInterval(() => load(filtersRef.current), 30_000)
+    return () => clearInterval(id)
+  }, [load])
 
   const filtered = !isEmpty(filters)
 
