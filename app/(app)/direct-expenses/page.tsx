@@ -1,4 +1,6 @@
 import { redirect } from "next/navigation"
+import Link from "next/link"
+import { ChevronLeft } from "lucide-react"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { directExpenseInclude, serializeDirectExpense } from "@/lib/expense-shape"
@@ -24,12 +26,21 @@ export default async function DirectExpensesPage() {
   const expenses = raw.map(serializeDirectExpense)
 
   return (
-    <div>
-      <div className="mb-6 hidden md:block">
-        <h1 className="text-2xl font-semibold">Non-group expenses</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Individual expenses between you and others, not tied to any group.
-        </p>
+    <div className="space-y-6">
+      <div className="flex flex-col gap-2 border-b pb-4">
+        <Link
+          href="/groups"
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-1"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Back to Groups
+        </Link>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Non-group Expenses</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Individual expenses between you and others, not tied to any group.
+          </p>
+        </div>
       </div>
 
       {expenses.length === 0 ? (

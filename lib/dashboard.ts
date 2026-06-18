@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma"
 import { computeGroupBalances } from "@/lib/balances"
-import { getDirectBalanceTotals } from "@/lib/globalBalances"
+import { getGlobalDebts } from "@/lib/globalBalances"
 import { directExpenseVisibilityWhere } from "@/lib/directExpenses"
 
 export type DashboardData = {
@@ -49,18 +49,14 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
 
   const groupIds = memberships.map((m) => m.group.id)
 
-  // Per-group net via the same engine as /groups/[id]/balances → figures match.
-  const balancesByGroup = await Promise.all(
-    groupIds.map((gid) => computeGroupBalances(gid))
-  )
-
-  let totalOwed = 0
-  let totalOwing = 0
+  // Per-group net for group cards + gross per-person totals for summary cards.
+  const [balancesByGroup, globalDebts] = await Promise.all([
+    Promise.all(groupIds.map((gid) => computeGroupBalances(gid))),
+    getGlobalDebts(userId),
+  ])
 
   const groups = memberships.map((m, i) => {
     const net = balancesByGroup[i].net[userId] ?? 0
-    if (net > 0) totalOwed += net
-    else if (net < 0) totalOwing += -net
     return {
       id: m.group.id,
       name: m.group.name,
@@ -71,10 +67,10 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
     }
   })
 
-  // Fold in DIRECT (non-group) balances so the summary cards reflect everything.
-  const directTotals = await getDirectBalanceTotals(userId)
-  totalOwed = Math.round((totalOwed + directTotals.owed) * 100) / 100
-  totalOwing = Math.round((totalOwing + directTotals.owing) * 100) / 100
+  // Gross totals: sum each counterparty's balance independently so "you owe A ₹100"
+  // and "B owes you ₹30" both appear rather than collapsing to a single net figure.
+  const totalOwed = Math.round(globalDebts.owedToYou.reduce((s, r) => s + r.amount, 0) * 100) / 100
+  const totalOwing = Math.round(globalDebts.youOwe.reduce((s, r) => s + r.amount, 0) * 100) / 100
 
   // Recent activity is scoped to groupIds → never includes left groups.
   const [expenses, settlements, directExpenses, directSettlements] = await Promise.all([

@@ -66,65 +66,68 @@ export function PasswordForm() {
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Change password</CardTitle>
+    <Card className="bg-card/65 backdrop-blur-md border border-border/80 shadow-sm overflow-hidden">
+      <CardHeader className="border-b bg-muted/5">
+        <CardTitle className="text-lg font-bold tracking-tight">Security &amp; Password</CardTitle>
         <CardDescription>
           You&apos;ll need your current password to set a new one.
         </CardDescription>
       </CardHeader>
 
       <form onSubmit={handleSubmit(onSubmit)}>
-        <CardContent className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="currentPassword">Current password</Label>
+        <CardContent className="space-y-5 pt-6">
+          <div className="space-y-2">
+            <Label htmlFor="currentPassword" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Current Password</Label>
             <Input
               id="currentPassword"
               type="password"
               autoComplete="current-password"
+              className="bg-background/40 focus-visible:ring-primary/40"
               aria-invalid={!!errors.currentPassword}
               {...register("currentPassword")}
             />
             {errors.currentPassword && (
-              <p className="text-xs text-destructive">
+              <p className="text-xs text-destructive mt-1">
                 {errors.currentPassword.message}
               </p>
             )}
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="newPassword">New password</Label>
+          <div className="space-y-2">
+            <Label htmlFor="newPassword" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">New Password</Label>
             <Input
               id="newPassword"
               type="password"
               autoComplete="new-password"
+              className="bg-background/40 focus-visible:ring-primary/40"
               aria-invalid={!!errors.newPassword}
               {...register("newPassword")}
             />
             {errors.newPassword && (
-              <p className="text-xs text-destructive">{errors.newPassword.message}</p>
+              <p className="text-xs text-destructive mt-1">{errors.newPassword.message}</p>
             )}
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="confirmPassword">Confirm new password</Label>
+          <div className="space-y-2">
+            <Label htmlFor="confirmPassword" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Confirm New Password</Label>
             <Input
               id="confirmPassword"
               type="password"
               autoComplete="new-password"
+              className="bg-background/40 focus-visible:ring-primary/40"
               aria-invalid={!!errors.confirmPassword}
               {...register("confirmPassword")}
             />
             {errors.confirmPassword && (
-              <p className="text-xs text-destructive">
+              <p className="text-xs text-destructive mt-1">
                 {errors.confirmPassword.message}
               </p>
             )}
           </div>
         </CardContent>
 
-        <CardFooter>
-          <Button type="submit" disabled={isLoading}>
+        <CardFooter className="border-t bg-muted/10 px-6 py-4 flex justify-end">
+          <Button type="submit" disabled={isLoading} className="bg-primary hover:bg-primary/95 shadow transition-all duration-200 hover:scale-[1.01] active:scale-[0.99]">
             {isLoading ? "Changing…" : "Change password"}
           </Button>
         </CardFooter>

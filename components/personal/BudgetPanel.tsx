@@ -28,7 +28,11 @@ function BudgetRow({
 
   const pct = entry.limit > 0 ? Math.min((entry.spent / entry.limit) * 100, 100) : 0
   const barColor =
-    pct >= 100 ? "bg-destructive" : pct >= 70 ? "bg-warning" : "bg-success"
+    pct >= 100 
+      ? "from-destructive/80 to-destructive" 
+      : pct >= 75 
+      ? "from-warning/80 to-warning" 
+      : "from-success/80 to-success"
   const cat = categoryMeta(entry.category)
 
   async function save() {
@@ -80,9 +84,9 @@ function BudgetRow({
           </div>
         )}
       </div>
-      <div className="h-2 w-full overflow-hidden rounded-full bg-muted">
+      <div className="h-2.5 w-full overflow-hidden rounded-full bg-muted/60">
         <div
-          className={`h-full rounded-full transition-all duration-300 ${barColor}`}
+          className={`h-full rounded-full bg-gradient-to-r transition-all duration-500 ease-out ${barColor}`}
           style={{ width: `${pct}%` }}
         />
       </div>
@@ -137,14 +141,14 @@ export function BudgetPanel({ initialBudgets }: { initialBudgets: BudgetEntry[] 
   }
 
   return (
-    <div className="rounded-xl border bg-card p-5 shadow-sm space-y-4">
+    <div className="rounded-xl border bg-card/65 backdrop-blur-md p-5 shadow-sm space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold">Monthly budgets</h2>
         {available.length > 0 && !adding && (
           <button
             type="button"
             onClick={() => setAdding(true)}
-            className="flex items-center gap-1 text-xs text-primary hover:opacity-80"
+            className="flex items-center gap-1 text-xs text-primary hover:opacity-80 transition-opacity font-medium"
           >
             <Plus className="h-3.5 w-3.5" /> Add budget
           </button>
@@ -164,33 +168,33 @@ export function BudgetPanel({ initialBudgets }: { initialBudgets: BudgetEntry[] 
       </div>
 
       {adding && (
-        <div className="rounded-lg border bg-accent/30 p-3 space-y-2">
-          <p className="text-xs font-medium text-muted-foreground">New budget</p>
-          <div className="flex gap-2">
+        <div className="rounded-xl border border-primary/20 bg-primary/5 p-4 space-y-3 animate-in fade-in-50 slide-in-from-top-2 duration-200">
+          <p className="text-xs font-semibold text-primary uppercase tracking-wider">New budget</p>
+          <div className="flex flex-col sm:flex-row gap-3">
             <NativeSelect
               value={newCategory}
               onChange={(e) => setNewCategory(e.target.value)}
-              className="flex-1"
+              className="flex-1 bg-background"
             >
               <option value="">Category…</option>
               {available.map((c) => (
                 <option key={c.value} value={c.value}>{c.icon} {c.label}</option>
               ))}
             </NativeSelect>
-            <div className="relative w-28">
+            <div className="relative w-full sm:w-36">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">₹</span>
               <Input
                 type="number"
                 placeholder="Limit"
                 value={newAmount}
                 onChange={(e) => setNewAmount(e.target.value)}
-                className="pl-6"
+                className="pl-7 bg-background"
                 min="1"
               />
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button size="sm" onClick={addNew} disabled={saving}>Save</Button>
+          <div className="flex gap-2 justify-end pt-1">
+            <Button size="sm" onClick={addNew} disabled={saving} className="bg-primary hover:bg-primary/90">Save</Button>
             <Button size="sm" variant="ghost" onClick={() => { setAdding(false); setNewCategory(""); setNewAmount("") }}>Cancel</Button>
           </div>
         </div>
