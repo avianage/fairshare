@@ -5,6 +5,7 @@ import { toast } from "sonner"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { NativeSelect } from "@/components/ui/native-select"
 import { EXPENSE_CATEGORIES } from "@/lib/categories"
 import {
   SplitTypeSelector,
@@ -50,9 +51,6 @@ export function ExpenseForm({
   })
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
-
-  const selectClass =
-    "flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
 
   const amountNum = Number(amount)
   const validAmount = amountNum > 0 && amountNum <= 999999.99
@@ -143,18 +141,17 @@ export function ExpenseForm({
         </div>
         <div className="space-y-2">
           <Label htmlFor="payer">Paid by</Label>
-          <select
+          <NativeSelect
             id="payer"
             value={payerId}
             onChange={(e) => setPayerId(e.target.value)}
-            className={selectClass}
           >
             {members.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.id === currentUserId ? `${m.name} (you)` : m.name}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
       </div>
 
@@ -171,18 +168,17 @@ export function ExpenseForm({
         </div>
         <div className="space-y-2">
           <Label htmlFor="category">Category</Label>
-          <select
+          <NativeSelect
             id="category"
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className={selectClass}
           >
             {EXPENSE_CATEGORIES.map((c) => (
               <option key={c.value} value={c.value}>
                 {c.icon} {c.label}
               </option>
             ))}
-          </select>
+          </NativeSelect>
         </div>
       </div>
 
@@ -208,7 +204,7 @@ export function ExpenseForm({
 
       {error && <p className="text-sm text-destructive">{error}</p>}
 
-      <div className="flex gap-3">
+      <div className="sticky bottom-0 bg-card pt-2 flex gap-3">
         <Button
           type="submit"
           disabled={submitting || !description.trim() || !validAmount || !split.valid}

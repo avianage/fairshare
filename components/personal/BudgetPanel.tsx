@@ -7,6 +7,7 @@ import { EXPENSE_CATEGORIES, categoryMeta } from "@/lib/categories"
 import { formatINR } from "@/lib/format"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { NativeSelect } from "@/components/ui/native-select"
 
 export type BudgetEntry = {
   category: string
@@ -166,16 +167,16 @@ export function BudgetPanel({ initialBudgets }: { initialBudgets: BudgetEntry[] 
         <div className="rounded-lg border bg-accent/30 p-3 space-y-2">
           <p className="text-xs font-medium text-muted-foreground">New budget</p>
           <div className="flex gap-2">
-            <select
+            <NativeSelect
               value={newCategory}
               onChange={(e) => setNewCategory(e.target.value)}
-              className="flex h-9 flex-1 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="flex-1"
             >
               <option value="">Category…</option>
               {available.map((c) => (
                 <option key={c.value} value={c.value}>{c.icon} {c.label}</option>
               ))}
-            </select>
+            </NativeSelect>
             <div className="relative w-28">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">₹</span>
               <Input
