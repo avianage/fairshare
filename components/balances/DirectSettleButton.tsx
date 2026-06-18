@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import { getApiError } from "@/lib/api-error"
 import { Button } from "@/components/ui/button"
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog"
 import { formatINR } from "@/lib/format"
@@ -32,9 +33,8 @@ export function DirectSettleButton({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ toUserId, amount }),
       })
-      const data = await res.json().catch(() => null)
       if (!res.ok) {
-        toast.error(data?.error ?? "Could not record the settlement.")
+        toast.error(await getApiError(res, "Could not record the settlement."))
         setBusy(false)
         return
       }

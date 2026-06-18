@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
+import { getApiError } from "@/lib/api-error"
 import { X, UserPlus, Copy, Link } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -34,11 +35,11 @@ export function AddMemberModal({ groupId }: { groupId: string }) {
     setGenerating(true)
     try {
       const res = await fetch(`/api/groups/${groupId}/invite`, { method: "POST" })
-      const data = await res.json().catch(() => null)
       if (!res.ok) {
-        toast.error(data?.error ?? "Could not generate invite link.")
+        toast.error(await getApiError(res, "Could not generate invite link."))
       } else {
-        setInviteUrl(data.inviteUrl)
+        const data = await res.json().catch(() => null)
+        setInviteUrl(data?.inviteUrl)
       }
     } catch {
       toast.error("Something went wrong.")

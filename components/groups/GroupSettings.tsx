@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import { getApiError } from "@/lib/api-error"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -69,8 +70,7 @@ export function GroupSettings({
         }),
       })
       if (!res.ok) {
-        const data = await res.json().catch(() => null)
-        toast.error(data?.error ?? "Could not save changes.")
+        toast.error(await getApiError(res, "Could not save changes."))
       } else {
         toast.success("Group details saved.")
         router.refresh()
@@ -93,11 +93,11 @@ export function GroupSettings({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email }),
       })
-      const data = await res.json().catch(() => null)
       if (!res.ok) {
-        toast.error(data?.error ?? "Could not add that person.")
+        toast.error(await getApiError(res, "Could not add that person."))
       } else {
-        toast.success(`Added ${data.member?.name ?? email} to the group.`)
+        const data = await res.json().catch(() => null)
+        toast.success(`Added ${data?.member?.name ?? email} to the group.`)
         setAddEmail("")
         router.refresh()
       }
@@ -113,11 +113,11 @@ export function GroupSettings({
     setGenerating(true)
     try {
       const res = await fetch(`/api/groups/${group.id}/invite`, { method: "POST" })
-      const data = await res.json().catch(() => null)
       if (!res.ok) {
-        toast.error(data?.error ?? "Could not generate an invite link.")
+        toast.error(await getApiError(res, "Could not generate an invite link."))
       } else {
-        setInviteUrl(data.inviteUrl)
+        const data = await res.json().catch(() => null)
+        setInviteUrl(data?.inviteUrl)
         toast.success("Invite link generated.")
       }
     } catch {

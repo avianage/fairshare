@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { useForm } from "react-hook-form"
+import { getApiError } from "@/lib/api-error"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { toast } from "sonner"
@@ -56,8 +57,7 @@ export function PasswordForm() {
     setIsLoading(false)
 
     if (!res.ok) {
-      const body = await res.json().catch(() => ({}))
-      toast.error(body.error ?? "Could not change password")
+      toast.error(await getApiError(res, "Could not change password"))
       return
     }
 

@@ -88,6 +88,10 @@ type Policy = { bucket: string; limit: number; windowMs: number }
 const MINUTE_MS = 60 * 1000
 
 export function policyForPath(pathname: string): Policy | null {
+  // No rate limiting in development — avoids false 429s during local testing
+  // and prevents the polling intervals we add from burning through the bucket.
+  if (process.env.NODE_ENV === "development") return null
+
   // NLP parsing calls a paid LLM — strict 10/minute cap (abuse / cost control).
   if (pathname === "/api/expenses/parse") {
     return { bucket: "nlp-parse", limit: 10, windowMs: MINUTE_MS }
@@ -106,7 +110,8 @@ export function policyForPath(pathname: string): Policy | null {
     return null
   }
   if (pathname.startsWith("/api/")) {
-    return { bucket: "api", limit: 100, windowMs: HOUR_MS }
+    // 500/hour gives real users plenty of headroom even with background polling.
+    return { bucket: "api", limit: 500, windowMs: HOUR_MS }
   }
   return null
 }

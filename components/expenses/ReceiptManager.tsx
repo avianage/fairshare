@@ -3,6 +3,7 @@
 import { useRef, useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import { getApiError } from "@/lib/api-error"
 import { Button } from "@/components/ui/button"
 
 const ACCEPTED = ["image/jpeg", "image/png", "image/webp"]
@@ -46,8 +47,7 @@ export function ReceiptManager({
     try {
       const res = await fetch(base, { method: "POST", body: form })
       if (!res.ok) {
-        const data = await res.json().catch(() => null)
-        toast.error(data?.error ?? "Could not upload the receipt.")
+        toast.error(await getApiError(res, "Could not upload the receipt."))
         return
       }
       toast.success("Receipt uploaded.")
@@ -65,8 +65,7 @@ export function ReceiptManager({
     try {
       const res = await fetch(base, { method: "DELETE" })
       if (!res.ok) {
-        const data = await res.json().catch(() => null)
-        toast.error(data?.error ?? "Could not remove the receipt.")
+        toast.error(await getApiError(res, "Could not remove the receipt."))
         return
       }
       toast.success("Receipt removed.")

@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { toast } from "sonner"
+import { getApiError } from "@/lib/api-error"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -91,8 +92,7 @@ export function ExpenseForm({
       })
 
       if (!res.ok) {
-        const data = await res.json().catch(() => null)
-        const msg = data?.error ?? "Could not save the expense."
+        const msg = await getApiError(res, "Could not save the expense.")
         setError(msg)
         toast.error(msg)
         setSubmitting(false)

@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
+import { getApiError } from "@/lib/api-error"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { toast } from "sonner"
@@ -67,8 +68,7 @@ export function ProfileForm({
     setIsLoading(false)
 
     if (!res.ok) {
-      const body = await res.json().catch(() => ({}))
-      toast.error(body.error ?? "Could not update profile")
+      toast.error(await getApiError(res, "Could not update profile"))
       return
     }
 
