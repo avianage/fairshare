@@ -1,6 +1,7 @@
 "use client"
 
 import { signOut } from "next-auth/react"
+import { LogOut } from "lucide-react"
 
 /**
  * Signs the user out. Before redirecting, it purges all service-worker caches
@@ -24,9 +25,11 @@ export function SignOutButton() {
     <button
       type="button"
       onClick={handleSignOut}
-      className="rounded-lg px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+      className="inline-flex h-9 items-center justify-center rounded-xl border border-border/80 bg-card/50 text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-foreground hover:border-primary/20 hover:shadow-sm active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring w-9 sm:w-auto sm:px-3.5 sm:gap-2"
+      title="Sign out"
     >
-      Sign out
+      <LogOut className="h-[1.1rem] w-[1.1rem]" />
+      <span className="hidden sm:inline text-sm font-semibold">Sign out</span>
     </button>
   )
 }

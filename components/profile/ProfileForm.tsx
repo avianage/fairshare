@@ -91,20 +91,21 @@ export function ProfileForm({
     : null
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Account</CardTitle>
+    <Card className="bg-card/65 backdrop-blur-md border border-border/80 shadow-sm overflow-hidden">
+      <CardHeader className="border-b bg-muted/5">
+        <CardTitle className="text-lg font-bold tracking-tight">Account Profile</CardTitle>
         <CardDescription>Member since {joined}</CardDescription>
       </CardHeader>
 
       <form onSubmit={handleSubmit(onSubmit)}>
-        <CardContent className="space-y-4">
-          <div className="space-y-1.5">
-            <Label htmlFor="name">Name</Label>
+        <CardContent className="space-y-5 pt-6">
+          <div className="space-y-2">
+            <Label htmlFor="name" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Name</Label>
             <Input
               id="name"
               type="text"
               autoComplete="name"
+              className="bg-background/40 focus-visible:ring-primary/40"
               aria-invalid={!!errors.name}
               {...register("name")}
             />
@@ -113,15 +114,15 @@ export function ProfileForm({
             )}
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="username">Username</Label>
+          <div className="space-y-2">
+            <Label htmlFor="username" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Username</Label>
             <div className="relative">
-              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground text-sm">@</span>
+              <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-muted-foreground text-sm font-medium">@</span>
               <Input
                 id="username"
                 type="text"
                 autoComplete="username"
-                className="pl-7"
+                className="pl-7 bg-background/40 focus-visible:ring-primary/40 font-medium"
                 disabled={!canChangeUsername}
                 aria-invalid={!!errors.username}
                 {...register("username")}
@@ -130,25 +131,25 @@ export function ProfileForm({
             {errors.username ? (
               <p className="text-xs text-destructive">{errors.username.message}</p>
             ) : !canChangeUsername ? (
-              <p className="text-xs text-muted-foreground">
-                Username can be changed again on {nextChangeDate}.
+              <p className="text-xs text-muted-foreground/80 bg-warning/5 border border-warning/10 rounded-lg p-2.5 mt-1">
+                Username can be changed again on <span className="font-semibold text-warning-foreground">{nextChangeDate}</span>.
               </p>
             ) : (
               <p className="text-xs text-muted-foreground">Can be changed once every 30 days</p>
             )}
           </div>
 
-          <div className="space-y-1.5">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" value={email} disabled readOnly />
-            <p className="text-xs text-muted-foreground">
-              Email can&apos;t be changed.
+          <div className="space-y-2">
+            <Label htmlFor="email" className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Email Address</Label>
+            <Input id="email" type="email" value={email} disabled readOnly className="bg-muted/40 text-muted-foreground/80 cursor-not-allowed border-dashed" />
+            <p className="text-xs text-muted-foreground/80">
+              Email address cannot be changed.
             </p>
           </div>
         </CardContent>
 
-        <CardFooter>
-          <Button type="submit" disabled={isLoading || !isDirty}>
+        <CardFooter className="border-t bg-muted/10 px-6 py-4 flex justify-end">
+          <Button type="submit" disabled={isLoading || !isDirty} className="bg-primary hover:bg-primary/95 shadow transition-all duration-200 hover:scale-[1.01] active:scale-[0.99]">
             {isLoading ? "Saving…" : "Save changes"}
           </Button>
         </CardFooter>

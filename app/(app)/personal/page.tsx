@@ -1,4 +1,6 @@
 import { redirect } from "next/navigation"
+import Link from "next/link"
+import { ChevronLeft } from "lucide-react"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { directExpenseInclude, serializeDirectExpense } from "@/lib/expense-shape"
@@ -52,20 +54,28 @@ export default async function PersonalPage() {
 
   return (
     <div className="space-y-6">
-      <div className="hidden md:block">
-        <h1 className="text-2xl font-semibold">Personal expenses</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Solo expenses only you paid and owe.
-        </p>
-      </div>
-
-      {/* Summary chip */}
-      {thisMonthTotal > 0 && (
-        <div className="inline-flex items-center gap-2 rounded-full border bg-card px-4 py-2 text-sm shadow-sm">
-          <span className="text-muted-foreground">This month</span>
-          <span className="font-semibold">{formatINR(thisMonthTotal)}</span>
+      <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between border-b pb-4">
+        <div>
+          <Link
+            href="/profile"
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors mb-2 md:hidden"
+          >
+            <ChevronLeft className="h-4 w-4" />
+            Back to Profile
+          </Link>
+          <h1 className="text-2xl font-bold tracking-tight">Personal Expenses</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Solo expenses only you paid and owe.
+          </p>
         </div>
-      )}
+
+        {thisMonthTotal > 0 && (
+          <div className="flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm shadow-sm self-start md:self-center font-medium text-primary">
+            <span className="opacity-80">This month</span>
+            <span className="font-bold">{formatINR(thisMonthTotal)}</span>
+          </div>
+        )}
+      </div>
 
       {/* Budget panel */}
       <BudgetPanel initialBudgets={budgetSpending} />

@@ -97,7 +97,7 @@ export function PushSubscriber() {
       onClick={toggle}
       disabled={busy}
       title={subscribed ? "Disable notifications" : "Enable notifications"}
-      className="flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-accent hover:text-foreground disabled:opacity-50"
+      className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border/80 bg-card/50 text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-foreground hover:border-primary/20 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95 disabled:opacity-50"
       aria-label={subscribed ? "Disable push notifications" : "Enable push notifications"}
     >
       {subscribed ? <Bell className="h-4 w-4 fill-current" /> : <BellOff className="h-4 w-4" />}

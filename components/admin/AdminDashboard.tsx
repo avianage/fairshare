@@ -248,10 +248,10 @@ export function AdminDashboard({ currentUserId }: { currentUserId: string }) {
 
   return (
     <>
-      <Card>
-        <CardHeader className="pb-4">
+      <Card className="bg-card/65 backdrop-blur-md border border-border/80 shadow-sm overflow-hidden">
+        <CardHeader className="pb-4 border-b bg-muted/5">
           <CardTitle className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-            <span>Users ({total})</span>
+            <span className="text-lg font-bold tracking-tight">System Users ({total})</span>
             <form onSubmit={handleSearch} className="flex w-full sm:w-auto gap-2">
               <div className="relative flex-1 sm:flex-initial">
                 <Search className="pointer-events-none absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -259,16 +259,16 @@ export function AdminDashboard({ currentUserId }: { currentUserId: string }) {
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   placeholder="Search name, email, username…"
-                  className="pl-8 w-full sm:w-56 text-sm"
+                  className="pl-8 w-full sm:w-56 text-sm bg-background/40"
                 />
               </div>
-              <Button type="submit" size="sm" variant="outline">Search</Button>
+              <Button type="submit" size="sm" variant="outline" className="transition-all duration-200 active:scale-95">Search</Button>
             </form>
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           {loading ? (
-            <p className="px-6 py-8 text-center text-sm text-muted-foreground">Loading…</p>
+            <p className="px-6 py-8 text-center text-sm text-muted-foreground animate-pulse">Loading…</p>
           ) : users.length === 0 ? (
             <p className="px-6 py-8 text-center text-sm text-muted-foreground">No users found.</p>
           ) : (
@@ -277,39 +277,39 @@ export function AdminDashboard({ currentUserId }: { currentUserId: string }) {
               <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b text-xs text-muted-foreground">
-                      <th className="px-4 py-3 text-left font-medium">User</th>
-                      <th className="px-4 py-3 text-left font-medium">Username</th>
-                      <th className="px-4 py-3 text-left font-medium">Groups</th>
-                      <th className="px-4 py-3 text-left font-medium">Expenses</th>
-                      <th className="px-4 py-3 text-left font-medium">Joined</th>
-                      <th className="px-4 py-3 text-left font-medium">Status</th>
-                      <th className="px-4 py-3 text-right font-medium">Actions</th>
+                    <tr className="border-b text-xs text-muted-foreground bg-muted/20 font-semibold">
+                      <th className="px-4 py-3 text-left font-semibold">User</th>
+                      <th className="px-4 py-3 text-left font-semibold">Username</th>
+                      <th className="px-4 py-3 text-left font-semibold">Groups</th>
+                      <th className="px-4 py-3 text-left font-semibold">Expenses</th>
+                      <th className="px-4 py-3 text-left font-semibold">Joined</th>
+                      <th className="px-4 py-3 text-left font-semibold">Status</th>
+                      <th className="px-4 py-3 text-right font-semibold">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {users.map((user) => {
                       const isSelf = user.id === currentUserId
                       return (
-                        <tr key={user.id} className="border-b last:border-0 hover:bg-muted/30">
+                        <tr key={user.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors duration-150">
                           <td className="px-4 py-3">
-                            <div className="font-medium">{user.name}</div>
+                            <div className="font-semibold text-foreground">{user.name}</div>
                             <div className="text-xs text-muted-foreground">{user.email}</div>
                           </td>
-                          <td className="px-4 py-3 text-muted-foreground">
-                            {user.username ? `@${user.username}` : <span className="italic text-xs">none</span>}
+                          <td className="px-4 py-3 text-muted-foreground font-medium">
+                            {user.username ? `@${user.username}` : <span className="italic text-xs opacity-60">none</span>}
                           </td>
                           <td className="px-4 py-3">
                             <button
                               type="button"
                               onClick={() => setGroupsUser(user)}
-                              className="flex items-center gap-1 text-sm hover:text-primary"
+                              className="flex items-center gap-1.5 text-sm hover:text-primary transition-colors font-medium"
                             >
-                              <Users className="h-3.5 w-3.5" />
+                              <Users className="h-3.5 w-3.5 text-muted-foreground" />
                               {user.memberships.length}
                             </button>
                           </td>
-                          <td className="px-4 py-3">{user._count.expensesPaid}</td>
+                          <td className="px-4 py-3 font-medium">{user._count.expensesPaid}</td>
                           <td className="px-4 py-3 text-muted-foreground">
                             {new Date(user.createdAt).toLocaleDateString("en-IN", {
                               year: "numeric", month: "short", day: "numeric",
@@ -318,17 +318,19 @@ export function AdminDashboard({ currentUserId }: { currentUserId: string }) {
                           <td className="px-4 py-3">
                             <div className="flex flex-wrap gap-1">
                               {user.isAdmin && (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
+                                <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary border border-primary/20 shadow-sm">
                                   <ShieldCheck className="h-3 w-3" /> Admin
                                 </span>
                               )}
                               {user.isBanned && (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-medium text-destructive">
+                                <span className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-2 py-0.5 text-xs font-semibold text-destructive border border-destructive/20 shadow-sm">
                                   <Ban className="h-3 w-3" /> Banned
                                 </span>
                               )}
                               {!user.isAdmin && !user.isBanned && (
-                                <span className="text-xs text-muted-foreground">Active</span>
+                                <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-xs font-semibold text-success border border-success/20 shadow-sm">
+                                  Active
+                                </span>
                               )}
                             </div>
                           </td>

@@ -7,6 +7,7 @@ const TITLES: Record<string, string> = {
   "/groups": "Groups",
   "/balances": "Balances",
   "/profile": "Profile",
+  "/profile/settings": "Account & Security",
   "/personal": "Personal",
   "/friends": "Friends",
   "/admin": "Admin",
@@ -15,7 +16,7 @@ const TITLES: Record<string, string> = {
 
 export function MobilePageTitle() {
   const pathname = usePathname()
-  const key = "/" + (pathname?.split("/")[1] ?? "")
-  const title = TITLES[key] ?? "Fairshare"
-  return <span className="text-base font-semibold">{title}</span>
+  // Check exact path first (handles sub-routes like /profile/settings), then fall back to first segment
+  const title = TITLES[pathname ?? ""] ?? TITLES["/" + (pathname?.split("/")[1] ?? "")] ?? "Fairshare"
+  return <span className="block truncate text-base font-semibold tracking-tight whitespace-nowrap">{title}</span>
 }

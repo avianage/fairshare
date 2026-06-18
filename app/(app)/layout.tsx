@@ -7,6 +7,7 @@ import { PushSubscriber } from "@/components/PushSubscriber"
 import { SidebarNav, MobileNav } from "@/components/AppNav"
 import { AddExpenseFAB } from "@/components/fab/AddExpenseFAB"
 import { MobilePageTitle } from "@/components/MobilePageTitle"
+import { MobileHeaderLeft } from "@/components/MobileHeaderLeft"
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -55,18 +56,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <div className="flex flex-1 flex-col overflow-hidden">
         {/* Top bar */}
         <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b bg-card/80 px-4 backdrop-blur supports-[backdrop-filter]:bg-card/60 sm:px-6">
-          {/* Mobile: avatar linking to profile + dynamic page title */}
-          <div className="flex items-center gap-2.5 md:hidden">
-            <Link
-              href="/profile"
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/15 text-sm font-bold text-primary border border-primary/20"
-              aria-label="Profile"
-            >
-              {initial}
-            </Link>
-            <MobilePageTitle />
+          {/* Mobile: back button / avatar linking to profile + dynamic page title */}
+          <div className="flex items-center gap-2.5 md:hidden min-w-0 flex-1">
+            <MobileHeaderLeft initial={initial} />
+            <div className="truncate min-w-0 flex-1">
+              <MobilePageTitle />
+            </div>
           </div>
-          <div className="flex items-center gap-2 sm:gap-3 md:ml-auto">
+          <div className="flex shrink-0 items-center gap-2 sm:gap-3 md:ml-auto">
             <span className="hidden text-sm text-muted-foreground md:inline">
               {session.user.name}
             </span>
