@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import { getApiError } from "@/lib/api-error"
 import { Pencil } from "lucide-react"
 import { categoryMeta } from "@/lib/categories"
 import { formatMoney, formatRelativeTime } from "@/lib/format"
@@ -12,6 +13,7 @@ import { ConfirmDialog } from "@/components/ui/ConfirmDialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { NativeSelect } from "@/components/ui/native-select"
 
 export type ExpenseSplit = { user: { id: string; name: string }; amount: number }
 export type Expense = {
@@ -67,8 +69,7 @@ function EditExpenseForm({
     })
     setSaving(false)
     if (!res.ok) {
-      const data = await res.json().catch(() => null)
-      toast.error(data?.error ?? "Could not update the expense.")
+      toast.error(await getApiError(res, "Could not update the expense."))
       return
     }
     toast.success("Expense updated.")
@@ -174,8 +175,7 @@ export function ExpenseCard({
         : `/api/expenses/${expense.id}`
       const res = await fetch(deleteUrl, { method: "DELETE" })
       if (!res.ok) {
-        const data = await res.json().catch(() => null)
-        toast.error(data?.error ?? "Could not delete the expense.")
+        toast.error(await getApiError(res, "Could not delete the expense."))
         setDeleting(false)
         return
       }

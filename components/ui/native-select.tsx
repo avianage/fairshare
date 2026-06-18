@@ -2,7 +2,9 @@ import * as React from "react"
 import { cn } from "@/lib/utils"
 import { ChevronDown } from "lucide-react"
 
-export type NativeSelectProps = React.SelectHTMLAttributes<HTMLSelectElement>
+export type NativeSelectProps = React.SelectHTMLAttributes<HTMLSelectElement> & {
+  placeholder?: string
+}
 
 const NativeSelect = React.forwardRef<HTMLSelectElement, NativeSelectProps>(
   ({ className, children, value, onChange, placeholder, ...props }, ref) => {
