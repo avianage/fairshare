@@ -51,6 +51,23 @@ export function BalanceSummary({
     load()
   }, [load])
 
+  // Refresh when any expense or settlement changes on this group page.
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const { groupId: gid } = (e as CustomEvent).detail ?? {}
+      if (gid && gid !== groupId) return
+      load()
+    }
+    window.addEventListener("fairshare:expense-changed", handler)
+    return () => window.removeEventListener("fairshare:expense-changed", handler)
+  }, [groupId, load])
+
+  // Poll every 30 s to pick up changes from other users.
+  useEffect(() => {
+    const id = setInterval(load, 30_000)
+    return () => clearInterval(id)
+  }, [load])
+
   if (loading) {
     return (
       <div className="rounded-xl border bg-card shadow-sm">
@@ -159,8 +176,11 @@ export function BalanceSummary({
           onSuccess={() => {
             setSettling(null)
             toast.success("Settlement recorded.")
-            load() // refetch balances
-            router.refresh() // refresh server data (expense list, group meta)
+            load()
+            router.refresh()
+            window.dispatchEvent(
+              new CustomEvent("fairshare:expense-changed", { detail: { groupId } })
+            )
           }}
         />
       )}

@@ -187,6 +187,9 @@ export function ExpenseCard({
       setConfirmingDelete(false)
       setDeleting(false)
       router.refresh()
+      window.dispatchEvent(
+        new CustomEvent("fairshare:expense-changed", { detail: { groupId } })
+      )
     } catch {
       toast.error("Something went wrong.")
       setDeleting(false)
@@ -289,7 +292,13 @@ export function ExpenseCard({
         <EditExpenseForm
           expense={expense}
           groupId={groupId}
-          onSave={() => { setEditing(false); router.refresh() }}
+          onSave={() => {
+            setEditing(false)
+            router.refresh()
+            window.dispatchEvent(
+              new CustomEvent("fairshare:expense-changed", { detail: { groupId } })
+            )
+          }}
           onCancel={() => setEditing(false)}
         />
       )}
