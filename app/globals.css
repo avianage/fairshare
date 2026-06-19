@@ -68,6 +68,16 @@
   option {
     font-family: inherit;
   }
+  /* Prevent text selection / Android Google Search overlay across the entire app */
+  * {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+  /* Re-enable selection only where the user needs to type */
+  input, textarea {
+    -webkit-user-select: text;
+    user-select: text;
+  }
 }
 
 @layer utilities {
