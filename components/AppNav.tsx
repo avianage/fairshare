@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useState } from "react"
 import Link from "next/link"
@@ -33,13 +33,15 @@ function isActive(pathname: string, href: string) {
 }
 
 /** Vertical nav for the desktop sidebar. */
-export function SidebarNav({ showAdmin }: { showAdmin?: boolean }) {
+export function SidebarNav({ showAdmin, friendRequestCount = 0 }: { showAdmin?: boolean; friendRequestCount?: number }) {
   const pathname = usePathname()
   const links = showAdmin ? [...baseLinks, adminLink] : baseLinks
   return (
     <nav className="flex-1 space-y-1.5 p-4 text-sm">
       {links.map(({ href, label, icon: Icon }) => {
         const active = isActive(pathname, href)
+        const badge = href === "/friends" && friendRequestCount > 0 ? friendRequestCount : 0
+        const isAdmin = href === "/admin"
         return (
           <Link
             key={href}
@@ -47,15 +49,36 @@ export function SidebarNav({ showAdmin }: { showAdmin?: boolean }) {
             className={cn(
               "group relative flex items-center gap-3 rounded-lg px-3.5 py-2.5 font-medium transition-all duration-200",
               active
-                ? "bg-primary/10 text-primary shadow-sm font-semibold"
-                : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
+                ? isAdmin
+                  ? "bg-destructive/10 text-destructive shadow-sm font-semibold"
+                  : "bg-primary/10 text-primary shadow-sm font-semibold"
+                : isAdmin
+                  ? "text-destructive hover:bg-destructive/10"
+                  : "text-muted-foreground hover:bg-accent/60 hover:text-foreground"
             )}
           >
             {active && (
-              <span className="absolute left-0 top-1/4 h-1/2 w-1 rounded-r-full bg-primary" />
+              <span className={cn(
+                "absolute left-0 top-1/4 h-1/2 w-1 rounded-r-full",
+                isAdmin ? "bg-destructive" : "bg-primary"
+              )} />
             )}
-            <Icon className={cn("h-4 w-4 transition-transform duration-200 group-hover:scale-110", active ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
-            {label}
+            <Icon className={cn(
+              "h-4 w-4 transition-transform duration-200 group-hover:scale-110",
+              active
+                ? isAdmin
+                  ? "text-destructive"
+                  : "text-primary"
+                : isAdmin
+                  ? "text-destructive"
+                  : "text-muted-foreground group-hover:text-foreground"
+            )} />
+            <span className="flex-1">{label}</span>
+            {badge > 0 && (
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1.5 text-[11px] font-semibold text-primary-foreground">
+                {badge > 99 ? "99+" : badge}
+              </span>
+            )}
           </Link>
         )
       })}

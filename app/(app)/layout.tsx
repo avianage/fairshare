@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation"
 import Link from "next/link"
 import { auth } from "@/lib/auth"
+import { prisma } from "@/lib/prisma"
 import { SignOutButton } from "@/components/SignOutButton"
 import { ThemeToggle } from "@/components/ThemeToggle"
 import { PushSubscriber } from "@/components/PushSubscriber"
@@ -18,6 +19,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   const initial = (session.user.name ?? "?").charAt(0).toUpperCase()
 
+  const friendRequestCount = await prisma.friendRequest.count({
+    where: { receiverId: session.user.id },
+  })
+
   return (
     <div className="flex h-screen bg-background">
       {/* Sidebar — hidden on mobile, where a top nav row takes over */}
@@ -31,7 +36,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           />
           <span className="text-xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/85 bg-clip-text text-transparent">Fairshare</span>
         </div>
-        <SidebarNav showAdmin={session.user.isAdmin} />
+        <SidebarNav showAdmin={session.user.isAdmin} friendRequestCount={friendRequestCount} />
         <div className="border-t p-4 bg-muted/20">
           <Link
             href="/profile"

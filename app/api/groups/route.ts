@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
   const group = await prisma.$transaction(async (tx) => {
     const created = await tx.group.create({
       // Friendly xxxx-xxxx-xxxx-xxxx id so the group URL reads cleanly.
-      data: { id: generateGroupId(), name, emoji, description, currency },
+      data: { id: generateGroupId(), name, emoji, description, currency, ownerId: userId },
     })
     await tx.groupMember.create({
       data: { groupId: created.id, userId, role: "ADMIN" },

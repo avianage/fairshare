@@ -6,9 +6,10 @@ import { ForbiddenError, requireGroupAdmin, requireGroupMember } from "@/lib/aut
 
 type Params = { params: { groupId: string } }
 
-const addMemberSchema = z.object({
-  email: z.string().trim().toLowerCase().email("Enter a valid email address"),
-})
+const addMemberSchema = z.union([
+  z.object({ email: z.string().trim().toLowerCase().email("Enter a valid email address") }),
+  z.object({ userId: z.string().min(1, "userId is required") }),
+])
 
 // GET /api/groups/[groupId]/members — list members (any member). Used by the
 // Add-Expense modal to populate the participant list for a group expense.
@@ -44,15 +45,6 @@ export async function POST(request: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  try {
-    await requireGroupAdmin(params.groupId, session.user.id)
-  } catch (e) {
-    if (e instanceof ForbiddenError) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
-    }
-    throw e
-  }
-
   let body: unknown
   try {
     body = await request.json()
@@ -62,35 +54,59 @@ export async function POST(request: NextRequest, { params }: Params) {
 
   const parsed = addMemberSchema.safeParse(body)
   if (!parsed.success) {
-    return NextResponse.json(
-      { error: parsed.error.flatten().fieldErrors.email?.[0] ?? "Validation failed" },
-      { status: 400 }
-    )
+    const firstError = Object.values(parsed.error.flatten().fieldErrors)[0]?.[0]
+    return NextResponse.json({ error: firstError ?? "Validation failed" }, { status: 400 })
   }
-  const { email } = parsed.data
 
   // The group must exist and not be soft-deleted.
   const group = await prisma.group.findFirst({
     where: { id: params.groupId, deletedAt: null },
-    select: { id: true },
+    select: { id: true, allowMemberInvites: true },
   })
-  if (!group) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 })
+  if (!group) return NextResponse.json({ error: "Not found" }, { status: 404 })
+
+  // Email path: always admin-only. userId path: any member if allowMemberInvites is on.
+  const isMemberInvite = "userId" in parsed.data && group.allowMemberInvites
+  try {
+    if (isMemberInvite) {
+      await requireGroupMember(params.groupId, session.user.id)
+    } else {
+      await requireGroupAdmin(params.groupId, session.user.id)
+    }
+  } catch (e) {
+    if (e instanceof ForbiddenError) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
+    }
+    throw e
   }
 
-  // Must be an existing account — we never auto-create users here.
-  const user = await prisma.user.findUnique({
-    where: { email },
-    select: { id: true, name: true, email: true },
-  })
-  if (!user) {
-    return NextResponse.json(
-      {
-        error:
-          "No Fairshare account uses that email. Share an invite link so they can sign up and join.",
-      },
-      { status: 404 }
-    )
+  let user: { id: string; name: string; email: string } | null = null
+
+  if ("email" in parsed.data) {
+    user = await prisma.user.findUnique({
+      where: { email: parsed.data.email },
+      select: { id: true, name: true, email: true },
+    })
+    if (!user) {
+      return NextResponse.json(
+        { error: "No Fairshare account uses that email. Share an invite link so they can sign up and join." },
+        { status: 404 }
+      )
+    }
+  } else {
+    // userId path — only allowed for existing friends (trust check)
+    const friendship = await prisma.friendship.findUnique({
+      where: { userId_friendId: { userId: session.user.id, friendId: parsed.data.userId } },
+      select: { friendId: true },
+    })
+    if (!friendship) {
+      return NextResponse.json({ error: "You can only directly add friends to a group." }, { status: 403 })
+    }
+    user = await prisma.user.findUnique({
+      where: { id: parsed.data.userId },
+      select: { id: true, name: true, email: true },
+    })
+    if (!user) return NextResponse.json({ error: "User not found." }, { status: 404 })
   }
 
   // Already a member? Surface a clear, non-fatal message.
@@ -99,10 +115,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     select: { id: true },
   })
   if (existing) {
-    return NextResponse.json(
-      { error: `${user.name} is already in this group.` },
-      { status: 409 }
-    )
+    return NextResponse.json({ error: `${user.name} is already in this group.` }, { status: 409 })
   }
 
   await prisma.groupMember.create({

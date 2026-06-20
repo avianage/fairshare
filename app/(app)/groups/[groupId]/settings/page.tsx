@@ -27,6 +27,9 @@ export default async function GroupSettingsPage({
       name: true,
       emoji: true,
       description: true,
+      currency: true,
+      ownerId: true,
+      allowMemberInvites: true,
       members: {
         select: {
           role: true,
@@ -45,6 +48,8 @@ export default async function GroupSettingsPage({
     role: m.role,
   }))
 
+  const isOwner = group.ownerId === session.user.id
+
   return (
     <div className="mx-auto max-w-lg">
       <Link
@@ -61,9 +66,12 @@ export default async function GroupSettingsPage({
           name: group.name,
           emoji: group.emoji,
           description: group.description,
+          currency: group.currency,
+          allowMemberInvites: group.allowMemberInvites,
         }}
         members={members}
         isAdmin={membership.role === "ADMIN"}
+        isOwner={isOwner}
         currentUserId={session.user.id}
       />
     </div>

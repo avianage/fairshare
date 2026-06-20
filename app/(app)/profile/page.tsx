@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation"
 import Link from "next/link"
-import { Settings, Wallet, ShieldCheck, ChevronRight, Users, User } from "lucide-react"
+import { Settings, Wallet, ShieldCheck, ChevronRight, Users, User, Scale, TrendingUp, PiggyBank, UserPlus } from "lucide-react"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 
@@ -59,7 +59,10 @@ export default async function ProfilePage() {
 
   const quickLinks = [
     { href: "/personal", icon: Wallet, label: "Personal Expenses", description: "Individual expenses not tied to a group" },
-    { href: "/profile/settings", icon: Settings, label: "Account & Security", description: "Name, username, password" },
+    { href: "/friends", icon: UserPlus, label: "Friends", description: "Manage your friends and requests" },
+    { href: "/balances", icon: Scale, label: "Balances", description: "See who owes you and what you owe" },
+    { href: "/budgets", icon: PiggyBank, label: "Budgets", description: "Set and track your spending limits" },
+    { href: "/insights", icon: TrendingUp, label: "Insights", description: "Spending trends and analytics" },
     ...(session.user.isAdmin ? [{ href: "/admin", icon: ShieldCheck, label: "Admin Panel", description: "Manage users and platform settings" }] : []),
   ]
 
@@ -118,24 +121,33 @@ export default async function ProfilePage() {
 
       {/* Quick links */}
       <div className="rounded-xl border bg-card/65 backdrop-blur-md overflow-hidden shadow-sm">
-        {quickLinks.map((link, i) => (
-          <Link
-            key={link.href}
-            href={link.href}
-            className={`group flex items-center gap-4 px-4 py-4 transition-all duration-300 hover:bg-accent/40 ${
-              i > 0 ? "border-t" : ""
-            }`}
-          >
-            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary border border-primary/20 shadow-sm transition-transform duration-300 group-hover:scale-105">
-              <link.icon className="h-5 w-5" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="text-sm font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary">{link.label}</p>
-              <p className="text-xs text-muted-foreground mt-0.5 truncate">{link.description}</p>
-            </div>
-            <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-300 group-hover:translate-x-1" />
-          </Link>
-        ))}
+        {quickLinks.map((link, i) => {
+          const isAdmin = link.href === "/admin"
+          return (
+            <Link
+              key={link.href}
+              href={link.href}
+              className={`group flex items-center gap-4 px-4 py-4 transition-all duration-300 ${
+                isAdmin ? "hover:bg-destructive/10" : "hover:bg-accent/40"
+              } ${i > 0 ? "border-t" : ""}`}
+            >
+              <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border shadow-sm transition-transform duration-300 group-hover:scale-105 ${
+                isAdmin
+                  ? "bg-destructive/10 text-destructive border-destructive/20"
+                  : "bg-primary/10 text-primary border-primary/20"
+              }`}>
+                <link.icon className="h-5 w-5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <p className={`text-sm font-semibold tracking-tight transition-colors ${
+                  isAdmin ? "text-destructive" : "text-foreground group-hover:text-primary"
+                }`}>{link.label}</p>
+                <p className="text-xs text-muted-foreground mt-0.5 truncate">{link.description}</p>
+              </div>
+              <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-300 group-hover:translate-x-1" />
+            </Link>
+          )
+        })}
       </div>
     </div>
   )
