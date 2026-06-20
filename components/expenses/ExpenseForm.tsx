@@ -6,8 +6,7 @@ import { getApiError } from "@/lib/api-error"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { NativeSelect } from "@/components/ui/native-select"
-import { EXPENSE_CATEGORIES } from "@/lib/categories"
+import { CategorySelect } from "@/components/expenses/CategorySelect"
 import {
   SplitTypeSelector,
   type SplitState,
@@ -166,20 +165,7 @@ export function ExpenseForm({
             required
           />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="category">Category</Label>
-          <NativeSelect
-            id="category"
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-          >
-            {EXPENSE_CATEGORIES.map((c) => (
-              <option key={c.value} value={c.value}>
-                {c.icon} {c.label}
-              </option>
-            ))}
-          </NativeSelect>
-        </div>
+        <CategorySelect value={category} onChange={setCategory} />
       </div>
 
       <div className="space-y-2">
