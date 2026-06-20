@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { NativeSelect } from "@/components/ui/native-select"
+import { CategorySelect } from "@/components/expenses/CategorySelect"
 import { UserSearch, type SearchUser } from "@/components/fab/UserSearch"
 import {
   SplitTypeSelector,
@@ -50,6 +51,7 @@ export function DirectExpenseForm({
   const [amount, setAmount] = useState(
     initial?.amount != null ? String(initial.amount) : ""
   )
+  const [category, setCategory] = useState("OTHER")
   const [payerId, setPayerId] = useState(initial?.payerId ?? currentUser.id)
   const [date, setDate] = useState(initial?.date ?? today())
   const [split, setSplit] = useState<SplitState>({
@@ -91,6 +93,7 @@ export function DirectExpenseForm({
         body: JSON.stringify({
           description: description.trim(),
           amount: Math.round(amountNum * 100) / 100,
+          category,
           payerId,
           participantIds: split.splitType === "EQUAL" && split.equalMemberIds && split.equalMemberIds.length < participants.length
             ? split.equalMemberIds
@@ -143,6 +146,8 @@ export function DirectExpenseForm({
         />
       </div>
 
+      <CategorySelect id="d-category" value={category} onChange={setCategory} />
+
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="d-amount">Amount</Label>
@@ -188,14 +193,18 @@ export function DirectExpenseForm({
         />
       </div>
 
-      {!isSolo && others.length >= 1 && (
+      {!isSolo && (
         <div className="space-y-2">
           <Label>Split</Label>
-          <SplitTypeSelector
-            members={participants}
-            amount={validAmount ? amountNum : 0}
-            onChange={setSplit}
-          />
+          {others.length === 0 ? (
+            <p className="text-xs text-muted-foreground">Add a participant above to configure the split.</p>
+          ) : (
+            <SplitTypeSelector
+              members={participants}
+              amount={validAmount ? amountNum : 0}
+              onChange={setSplit}
+            />
+          )}
         </div>
       )}
 

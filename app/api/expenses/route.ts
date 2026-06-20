@@ -19,7 +19,10 @@ const createDirectExpenseSchema = z
       .max(999999.99, "Amount is too large")
       .refine((n) => Number.isInteger(Math.round(n * 100)), "At most 2 decimal places"),
     payerId: z.string().min(1),
-    participantIds: z.array(z.string().min(1)).min(2, "Need at least 2 participants"),
+    participantIds: z.array(z.string().min(1)).min(1, "Need at least 1 participant"),
+    category: z
+      .enum(["FOOD", "TRANSPORT", "ACCOMMODATION", "ENTERTAINMENT", "SHOPPING", "GROCERIES", "UTILITIES", "HEALTH", "TRAVEL", "OTHER"])
+      .default("OTHER"),
     splitType: z.enum(["EQUAL", "EXACT", "PERCENTAGE", "SHARES"]).default("EQUAL"),
     // EXACT: rupee amount per user. PERCENTAGE: percent. SHARES: share count.
     values: z.record(z.string().min(1), z.number().finite().nonnegative()).optional(),
@@ -59,21 +62,13 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const { description, amount, payerId, splitType, values, date, note } = parsed.data
+  const { description, amount, payerId, category, splitType, values, date, note } = parsed.data
   const participantIds = Array.from(new Set(parsed.data.participantIds))
 
   // payer must be one of the participants.
   if (!participantIds.includes(payerId)) {
     return NextResponse.json(
       { error: "payerId must be included in participantIds" },
-      { status: 400 }
-    )
-  }
-
-  // Need at least 2 distinct participants after de-duping.
-  if (participantIds.length < 2) {
-    return NextResponse.json(
-      { error: "A direct expense needs at least 2 distinct participants" },
       { status: 400 }
     )
   }
@@ -161,6 +156,7 @@ export async function POST(request: NextRequest) {
       payerId,
       description,
       amount: new Prisma.Decimal(amount.toFixed(2)),
+      category,
       splitType,
       notes: note,
       date: date ?? new Date(),
