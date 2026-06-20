@@ -112,7 +112,7 @@ export function MobileNav({
   return (
     <>
       <nav
-        className="fixed bottom-0 left-0 right-0 z-40 flex items-end justify-around border-t border-border bg-background/90 backdrop-blur-lg md:hidden"
+        className="fixed bottom-0 left-0 right-0 z-40 flex items-stretch justify-around border-t border-border bg-background/90 backdrop-blur-lg md:hidden"
         style={{
           paddingBottom: "env(safe-area-inset-bottom)",
           height: "calc(4.5rem + env(safe-area-inset-bottom))",
