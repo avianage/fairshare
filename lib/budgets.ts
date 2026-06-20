@@ -13,6 +13,19 @@ export type BudgetSpending = {
   limit: number
 }
 
+/** Total of all the user's expense splits this month (group + direct). */
+export async function getTotalMonthSpending(userId: string, month: Date): Promise<number> {
+  const range = monthRange(month)
+  const result = await prisma.expenseSplit.aggregate({
+    where: {
+      userId,
+      expense: { deletedAt: null, date: range },
+    },
+    _sum: { amount: true },
+  })
+  return Math.round((result._sum.amount?.toNumber() ?? 0) * 100) / 100
+}
+
 /**
  * For each budget the user has set, calculate how much they've personally
  * spent this month (their share of group expenses + their personal/direct

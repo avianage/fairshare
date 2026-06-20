@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Plus, Pencil, Check, X } from "lucide-react"
+import { Plus, Pencil, Check, X, AlertTriangle } from "lucide-react"
 import { toast } from "sonner"
 import { EXPENSE_CATEGORIES, categoryMeta } from "@/lib/categories"
 import { formatINR } from "@/lib/format"
@@ -28,10 +28,10 @@ function BudgetRow({
 
   const pct = entry.limit > 0 ? Math.min((entry.spent / entry.limit) * 100, 100) : 0
   const barColor =
-    pct >= 100 
-      ? "from-destructive/80 to-destructive" 
-      : pct >= 75 
-      ? "from-warning/80 to-warning" 
+    pct >= 100
+      ? "from-destructive/80 to-destructive"
+      : pct >= 75
+      ? "from-warning/80 to-warning"
       : "from-success/80 to-success"
   const cat = categoryMeta(entry.category)
 
@@ -97,8 +97,134 @@ function BudgetRow({
   )
 }
 
-export function BudgetPanel({ initialBudgets }: { initialBudgets: BudgetEntry[] }) {
+function TotalBudgetSection({
+  totalSpent,
+  totalBudget,
+  onSave,
+}: {
+  totalSpent: number
+  totalBudget: number | null
+  onSave: (amount: number | null) => Promise<void>
+}) {
+  const [editing, setEditing] = useState(false)
+  const [value, setValue] = useState(totalBudget !== null ? String(totalBudget) : "")
+  const [saving, setSaving] = useState(false)
+
+  const pct = totalBudget && totalBudget > 0 ? Math.min((totalSpent / totalBudget) * 100, 100) : 0
+  const isOver = totalBudget !== null && totalSpent > totalBudget
+  const isNear = !isOver && pct >= 80
+  const barColor = isOver
+    ? "from-destructive/80 to-destructive"
+    : isNear
+    ? "from-warning/80 to-warning"
+    : "from-primary/70 to-primary"
+
+  async function save() {
+    const raw = value.trim()
+    if (raw === "" || raw === "0") {
+      setSaving(true)
+      await onSave(null)
+      setSaving(false)
+      setEditing(false)
+      return
+    }
+    const num = Number(raw)
+    if (!Number.isFinite(num) || num <= 0) {
+      toast.error("Enter a valid amount.")
+      return
+    }
+    setSaving(true)
+    await onSave(num)
+    setSaving(false)
+    setEditing(false)
+  }
+
+  return (
+    <div className="rounded-xl border bg-muted/30 p-4 space-y-3">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm font-semibold">Total monthly budget</span>
+        {editing ? (
+          <div className="flex items-center gap-1">
+            <span className="text-xs text-muted-foreground">₹</span>
+            <Input
+              type="number"
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              className="h-7 w-28 text-xs"
+              min="0"
+              placeholder="e.g. 10000"
+              autoFocus
+              onKeyDown={(e) => { if (e.key === "Enter") save(); if (e.key === "Escape") setEditing(false) }}
+            />
+            <button type="button" onClick={save} disabled={saving} className="text-success hover:opacity-80">
+              <Check className="h-4 w-4" />
+            </button>
+            <button type="button" onClick={() => setEditing(false)} className="text-muted-foreground hover:opacity-80">
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={() => { setValue(totalBudget !== null ? String(totalBudget) : ""); setEditing(true) }}
+            className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+          >
+            <Pencil className="h-3 w-3" />
+            {totalBudget !== null ? "Edit" : "Set limit"}
+          </button>
+        )}
+      </div>
+
+      {totalBudget !== null ? (
+        <>
+          <div className="flex items-baseline justify-between text-xs">
+            <span className={isOver ? "font-semibold text-destructive" : "text-muted-foreground"}>
+              {formatINR(totalSpent)} spent
+            </span>
+            <span className="text-muted-foreground">of {formatINR(totalBudget)}</span>
+          </div>
+          <div className="h-3 w-full overflow-hidden rounded-full bg-muted/60">
+            <div
+              className={`h-full rounded-full bg-gradient-to-r transition-all duration-500 ease-out ${barColor}`}
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-muted-foreground">{pct.toFixed(0)}% used</span>
+            {isOver && (
+              <span className="flex items-center gap-1 text-[10px] font-medium text-destructive">
+                <AlertTriangle className="h-3 w-3" />
+                Over budget by {formatINR(totalSpent - totalBudget)}
+              </span>
+            )}
+            {isNear && !isOver && (
+              <span className="flex items-center gap-1 text-[10px] font-medium text-warning">
+                <AlertTriangle className="h-3 w-3" />
+                Approaching limit
+              </span>
+            )}
+          </div>
+        </>
+      ) : (
+        <p className="text-xs text-muted-foreground">
+          Set a total limit to track your overall monthly spending.
+        </p>
+      )}
+    </div>
+  )
+}
+
+export function BudgetPanel({
+  initialBudgets,
+  initialTotalBudget,
+  initialTotalSpent,
+}: {
+  initialBudgets: BudgetEntry[]
+  initialTotalBudget: number | null
+  initialTotalSpent: number
+}) {
   const [budgets, setBudgets] = useState<BudgetEntry[]>(initialBudgets)
+  const [totalBudget, setTotalBudget] = useState<number | null>(initialTotalBudget)
   const [adding, setAdding] = useState(false)
   const [newCategory, setNewCategory] = useState("")
   const [newAmount, setNewAmount] = useState("")
@@ -128,6 +254,17 @@ export function BudgetPanel({ initialBudgets }: { initialBudgets: BudgetEntry[] 
     }
   }
 
+  async function saveTotalBudget(amount: number | null) {
+    const res = await fetch("/api/budgets/total", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ amount }),
+    })
+    if (!res.ok) { toast.error("Could not save total budget."); return }
+    setTotalBudget(amount)
+    toast.success(amount === null ? "Total budget removed." : "Total budget saved.")
+  }
+
   async function addNew() {
     const num = Number(newAmount)
     if (!newCategory) { toast.error("Select a category."); return }
@@ -142,8 +279,16 @@ export function BudgetPanel({ initialBudgets }: { initialBudgets: BudgetEntry[] 
 
   return (
     <div className="rounded-xl border bg-card/65 backdrop-blur-md p-5 shadow-sm space-y-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold">Monthly budgets</h2>
+      <h2 className="text-sm font-semibold">Monthly budgets</h2>
+
+      <TotalBudgetSection
+        totalSpent={initialTotalSpent}
+        totalBudget={totalBudget}
+        onSave={saveTotalBudget}
+      />
+
+      <div className="flex items-center justify-between pt-1">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">By category</p>
         {available.length > 0 && !adding && (
           <button
             type="button"
@@ -157,7 +302,7 @@ export function BudgetPanel({ initialBudgets }: { initialBudgets: BudgetEntry[] 
 
       {budgets.length === 0 && !adding && (
         <p className="text-sm text-muted-foreground">
-          No budgets set. Add one to track your monthly spending.
+          No category budgets set yet.
         </p>
       )}
 

@@ -16,23 +16,30 @@ const budgetSchema = z.object({
   amount: z.number().nonnegative().max(9999999.99),
 })
 
-// GET /api/budgets — list the current user's budget limits
+// GET /api/budgets — list the current user's budget limits + total monthly budget
 export async function GET() {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const budgets = await prisma.budget.findMany({
-    where: { userId: session.user.id },
-    select: { category: true, amount: true },
-    orderBy: { category: "asc" },
-  })
+  const [budgets, user] = await Promise.all([
+    prisma.budget.findMany({
+      where: { userId: session.user.id },
+      select: { category: true, amount: true },
+      orderBy: { category: "asc" },
+    }),
+    prisma.user.findUnique({
+      where: { id: session.user.id },
+      select: { totalMonthlyBudget: true },
+    }),
+  ])
 
   return NextResponse.json({
     budgets: budgets.map((b) => ({ category: b.category, amount: b.amount.toNumber() })),
+    totalBudget: user?.totalMonthlyBudget?.toNumber() ?? null,
   })
 }
 
-// POST /api/budgets — upsert a budget limit (amount=0 deletes it)
+// POST /api/budgets — upsert a category budget limit (amount=0 deletes it)
 export async function POST(req: NextRequest) {
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
