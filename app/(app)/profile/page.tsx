@@ -111,7 +111,7 @@ export default async function ProfilePage() {
           </span>
           <div>
             <p className="text-lg font-semibold leading-none">{directCount}</p>
-            <p className="text-xs text-muted-foreground mt-0.5">{directCount === 1 ? "Direct Connection" : "Direct Connections"}</p>
+            <p className="text-xs text-muted-foreground mt-0.5">{directCount === 1 ? "Direct Expense" : "Direct Expenses"}</p>
           </div>
         </Link>
       </div>

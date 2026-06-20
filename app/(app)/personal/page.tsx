@@ -4,9 +4,7 @@ import { ChevronLeft } from "lucide-react"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { directExpenseInclude, serializeDirectExpense } from "@/lib/expense-shape"
-import { getBudgetSpending } from "@/lib/budgets"
 import { ExpenseCard } from "@/components/expenses/ExpenseCard"
-import { BudgetPanel } from "@/components/personal/BudgetPanel"
 import { formatINR } from "@/lib/format"
 import { categoryMeta } from "@/lib/categories"
 
@@ -19,21 +17,17 @@ export default async function PersonalPage() {
   const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
   const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 1)
 
-  const [rawExpenses, budgetSpending] = await Promise.all([
-    // Personal = solo direct expenses: only participant is myself
-    prisma.expense.findMany({
-      where: {
-        groupId: null,
-        deletedAt: null,
-        payerId: userId,
-        participants: { every: { userId } },
-      },
-      include: directExpenseInclude,
-      orderBy: { date: "desc" },
-      take: 50,
-    }),
-    getBudgetSpending(userId, now),
-  ])
+  const rawExpenses = await prisma.expense.findMany({
+    where: {
+      groupId: null,
+      deletedAt: null,
+      payerId: userId,
+      participants: { every: { userId } },
+    },
+    include: directExpenseInclude,
+    orderBy: { date: "desc" },
+    take: 50,
+  })
 
   const expenses = rawExpenses.map(serializeDirectExpense)
 
@@ -76,9 +70,6 @@ export default async function PersonalPage() {
           </div>
         )}
       </div>
-
-      {/* Budget panel */}
-      <BudgetPanel initialBudgets={budgetSpending} />
 
       {/* Top categories (personal only) */}
       {categoryRows.length > 0 && (

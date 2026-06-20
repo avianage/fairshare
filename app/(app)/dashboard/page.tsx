@@ -1,9 +1,12 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
 import { auth } from "@/lib/auth"
+import { prisma } from "@/lib/prisma"
 import { getDashboardData } from "@/lib/dashboard"
+import { getTotalMonthSpending } from "@/lib/budgets"
 import { SummaryCards } from "@/components/dashboard/SummaryCards"
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed"
+import { BudgetSummaryCard } from "@/components/dashboard/BudgetSummaryCard"
 import { Button } from "@/components/ui/button"
 import { formatINR as inr } from "@/lib/format"
 import { cn } from "@/lib/utils"
@@ -11,8 +14,14 @@ import { cn } from "@/lib/utils"
 export default async function DashboardPage() {
   const session = await auth()
   if (!session?.user?.id) redirect("/login")
+  const userId = session.user.id
 
-  const data = await getDashboardData(session.user.id)
+  const now = new Date()
+  const [data, totalMonthSpent, userRecord] = await Promise.all([
+    getDashboardData(userId),
+    getTotalMonthSpending(userId, now),
+    prisma.user.findUnique({ where: { id: userId }, select: { totalMonthlyBudget: true } }),
+  ])
 
   return (
     <div className="space-y-8">
@@ -27,6 +36,11 @@ export default async function DashboardPage() {
         totalOwed={data.totalOwed}
         totalOwing={data.totalOwing}
         netBalance={data.netBalance}
+      />
+
+      <BudgetSummaryCard
+        totalSpent={totalMonthSpent}
+        totalBudget={userRecord?.totalMonthlyBudget?.toNumber() ?? null}
       />
 
       {/* Groups */}
