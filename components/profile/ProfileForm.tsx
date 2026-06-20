@@ -132,7 +132,7 @@ export function ProfileForm({
               <p className="text-xs text-destructive">{errors.username.message}</p>
             ) : !canChangeUsername ? (
               <p className="text-xs text-muted-foreground/80 bg-warning/5 border border-warning/10 rounded-lg p-2.5 mt-1">
-                Username can be changed again on <span className="font-semibold text-warning-foreground">{nextChangeDate}</span>.
+                Username can be changed again on <span className="font-semibold text-foreground">{nextChangeDate}</span>.
               </p>
             ) : (
               <p className="text-xs text-muted-foreground">Can be changed once every 30 days</p>
