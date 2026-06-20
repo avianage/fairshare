@@ -87,6 +87,10 @@ export function DirectExpenseForm({
 
     setSubmitting(true)
     try {
+      // If the selected date is today, use the actual current time.
+      // For past dates, use local noon (no time picker exists).
+      const today = new Date().toLocaleDateString("en-CA") // YYYY-MM-DD in local tz
+      const parsedDate = date === today ? new Date() : new Date(`${date}T12:00:00`)
       const res = await fetch("/api/expenses", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -99,7 +103,7 @@ export function DirectExpenseForm({
             ? split.equalMemberIds
             : participants.map((p) => p.id),
           splitType: split.splitType,
-          date: new Date(date).toISOString(),
+          date: parsedDate.toISOString(),
           ...(split.splitType !== "EQUAL" ? { values: split.values } : {}),
         }),
       })

@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { getDashboardData } from "@/lib/dashboard"
 import { getTotalMonthSpending } from "@/lib/budgets"
+import { BudgetModel } from "@prisma/client"
 import { SummaryCards } from "@/components/dashboard/SummaryCards"
 import { ActivityFeed } from "@/components/dashboard/ActivityFeed"
 import { BudgetSummaryCard } from "@/components/dashboard/BudgetSummaryCard"
@@ -17,11 +18,12 @@ export default async function DashboardPage() {
   const userId = session.user.id
 
   const now = new Date()
-  const [data, totalMonthSpent, userRecord] = await Promise.all([
+  const [data, userRecord] = await Promise.all([
     getDashboardData(userId),
-    getTotalMonthSpending(userId, now),
-    prisma.user.findUnique({ where: { id: userId }, select: { totalMonthlyBudget: true } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { totalMonthlyBudget: true, budgetModel: true } }),
   ])
+  const model = userRecord?.budgetModel ?? BudgetModel.NET_PAYMENT
+  const totalMonthSpent = await getTotalMonthSpending(userId, now, model)
 
   return (
     <div className="space-y-8">

@@ -1,3 +1,4 @@
+import { BudgetModel } from "@prisma/client"
 import { prisma } from "./prisma"
 
 /** Returns the start and end of the month containing `date`. */
@@ -13,8 +14,8 @@ export type BudgetSpending = {
   limit: number
 }
 
-/** Total of all the user's expense splits this month (group + direct). */
-export async function getTotalMonthSpending(userId: string, month: Date): Promise<number> {
+/** Sum of user's personal split amounts this month (group + direct). */
+async function getPersonalShareSpending(userId: string, month: Date): Promise<number> {
   const range = monthRange(month)
   const result = await prisma.expenseSplit.aggregate({
     where: {
@@ -27,9 +28,42 @@ export async function getTotalMonthSpending(userId: string, month: Date): Promis
 }
 
 /**
+ * Full expense amounts paid by user this month, minus settlements received this month.
+ * Reflects actual cash-flow: if you paid for others, budget drops; as they settle, it recovers.
+ */
+async function getNetPaymentSpending(userId: string, month: Date): Promise<number> {
+  const range = monthRange(month)
+  const [paid, received] = await Promise.all([
+    prisma.expense.aggregate({
+      where: { payerId: userId, deletedAt: null, date: range },
+      _sum: { amount: true },
+    }),
+    prisma.settlement.aggregate({
+      where: { receiverId: userId, createdAt: range },
+      _sum: { amount: true },
+    }),
+  ])
+  const totalPaid = paid._sum?.amount?.toNumber() ?? 0
+  const totalReceived = received._sum?.amount?.toNumber() ?? 0
+  return Math.max(0, Math.round((totalPaid - totalReceived) * 100) / 100)
+}
+
+/** Total of all the user's spending this month, using the selected accounting model. */
+export async function getTotalMonthSpending(
+  userId: string,
+  month: Date,
+  model: BudgetModel = BudgetModel.NET_PAYMENT,
+): Promise<number> {
+  return model === BudgetModel.NET_PAYMENT
+    ? getNetPaymentSpending(userId, month)
+    : getPersonalShareSpending(userId, month)
+}
+
+/**
  * For each budget the user has set, calculate how much they've personally
  * spent this month (their share of group expenses + their personal/direct
- * expenses in that category).
+ * expenses in that category). Always uses personal-share since settlements
+ * are not categorised.
  */
 export async function getBudgetSpending(userId: string, month: Date): Promise<BudgetSpending[]> {
   const range = monthRange(month)
@@ -46,7 +80,6 @@ export async function getBudgetSpending(userId: string, month: Date): Promise<Bu
       },
       _sum: { amount: true },
     }).then(async (rows) => {
-      // Need category per expense — fetch them
       if (rows.length === 0) return {} as Record<string, number>
       const expenses = await prisma.expense.findMany({
         where: { id: { in: rows.map((r) => r.expenseId) } },

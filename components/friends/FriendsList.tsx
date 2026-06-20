@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Copy, Link, RefreshCw, UserMinus, UserPlus, Users, ChevronDown } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -33,6 +34,7 @@ export function FriendsList({
   initialIncoming?: FriendRequestItem[]
   initialOutgoing?: FriendRequestItem[]
 }) {
+  const router = useRouter()
   const [friends, setFriends] = useState<Friend[]>(initialFriends)
   const [inviteUrl, setInviteUrl] = useState<string | null>(null)
   const [inviteExpiry, setInviteExpiry] = useState<string | null>(null)
@@ -141,11 +143,11 @@ export function FriendsList({
     : null
 
   function handleAccepted(friendId: string, friendName: string) {
-    // Optimistically add the new friend to the list (no group data yet, page refresh will fix)
     setFriends((prev) => [
       ...prev,
       { id: friendId, name: friendName, avatar: null, friendsSince: new Date().toISOString(), sharedGroupCount: 0, availableGroups: [] },
     ].sort((a, b) => a.name.localeCompare(b.name)))
+    router.refresh()
   }
 
   return (
@@ -157,7 +159,7 @@ export function FriendsList({
           <CardDescription>Search by name or @username to send a friend request.</CardDescription>
         </CardHeader>
         <CardContent>
-          <FriendSearch onRequestSent={() => {}} />
+          <FriendSearch onRequestSent={() => router.refresh()} />
         </CardContent>
       </Card>
 

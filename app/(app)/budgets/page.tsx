@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { getBudgetSpending, getTotalMonthSpending } from "@/lib/budgets"
 import { BudgetPanel } from "@/components/personal/BudgetPanel"
+import { BudgetModel } from "@prisma/client"
 
 export default async function BudgetsPage() {
   const session = await auth()
@@ -11,10 +12,16 @@ export default async function BudgetsPage() {
 
   const now = new Date()
 
-  const [budgetSpending, totalMonthSpent, userRecord] = await Promise.all([
+  const userRecord = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { totalMonthlyBudget: true, budgetModel: true },
+  })
+
+  const model = userRecord?.budgetModel ?? BudgetModel.NET_PAYMENT
+
+  const [budgetSpending, totalMonthSpent] = await Promise.all([
     getBudgetSpending(userId, now),
-    getTotalMonthSpending(userId, now),
-    prisma.user.findUnique({ where: { id: userId }, select: { totalMonthlyBudget: true } }),
+    getTotalMonthSpending(userId, now, model),
   ])
 
   return (
@@ -30,6 +37,7 @@ export default async function BudgetsPage() {
         initialBudgets={budgetSpending}
         initialTotalBudget={userRecord?.totalMonthlyBudget?.toNumber() ?? null}
         initialTotalSpent={totalMonthSpent}
+        initialBudgetModel={model}
       />
     </div>
   )

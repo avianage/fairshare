@@ -71,6 +71,10 @@ export function ExpenseForm({
 
     setSubmitting(true)
     try {
+      // If the selected date is today, use the actual current time.
+      // For past dates, use local noon (no time picker exists).
+      const today = new Date().toLocaleDateString("en-CA") // YYYY-MM-DD in local tz
+      const parsedDate = date === today ? new Date() : new Date(`${date}T12:00:00`)
       const res = await fetch(`/api/groups/${groupId}/expenses`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -78,7 +82,7 @@ export function ExpenseForm({
           description: description.trim(),
           amount: Math.round(amountNum * 100) / 100,
           payerId,
-          date: new Date(date).toISOString(),
+          date: parsedDate.toISOString(),
           category,
           notes: notes.trim() || undefined,
           splitType: split.splitType,
