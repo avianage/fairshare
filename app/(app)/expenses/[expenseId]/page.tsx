@@ -5,7 +5,7 @@ import { ArrowLeft } from "lucide-react"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { categoryMeta } from "@/lib/categories"
-import { formatINR, formatRelativeTime } from "@/lib/format"
+import { formatINR, formatExpenseDate } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { ExpenseActions } from "@/components/expenses/ExpenseActions"
 
@@ -99,7 +99,7 @@ export default async function ExpenseDetailPage({
           </div>
           <div className="shrink-0 text-right">
             <p className="text-2xl font-bold tabular-nums">{formatINR(Number(expense.amount))}</p>
-            <p className="text-xs text-muted-foreground">{formatRelativeTime(expense.date)}</p>
+            <p className="text-xs text-muted-foreground">{formatExpenseDate(expense.date)}</p>
           </div>
         </div>
 

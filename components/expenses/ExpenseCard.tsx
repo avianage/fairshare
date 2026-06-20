@@ -3,7 +3,7 @@
 import Link from "next/link"
 import { ChevronRight } from "lucide-react"
 import { categoryMeta } from "@/lib/categories"
-import { formatMoney, formatRelativeTime } from "@/lib/format"
+import { formatMoney, formatExpenseDate } from "@/lib/format"
 
 export type ExpenseSplit = { user: { id: string; name: string }; amount: number }
 export type Expense = {
@@ -48,7 +48,7 @@ export function ExpenseCard({
       <div className="min-w-0 flex-1">
         <p className="truncate font-medium">{expense.description}</p>
         <p className="truncate text-xs text-muted-foreground">
-          {expense.payer.name} paid · {formatRelativeTime(expense.date)}
+          {expense.payer.name} paid · {formatExpenseDate(expense.date)}
         </p>
       </div>
 

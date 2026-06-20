@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { AlertTriangle, PiggyBank } from "lucide-react"
+import { PiggyBank } from "lucide-react"
 import { formatINR } from "@/lib/format"
 
 export function BudgetSummaryCard({
@@ -9,9 +9,10 @@ export function BudgetSummaryCard({
   totalSpent: number
   totalBudget: number | null
 }) {
-  const pct = totalBudget && totalBudget > 0 ? Math.min((totalSpent / totalBudget) * 100, 100) : 0
+  const remaining = totalBudget !== null ? totalBudget - totalSpent : 0
+  const pct = totalBudget && totalBudget > 0 ? Math.max((remaining / totalBudget) * 100, 0) : 0
   const isOver = totalBudget !== null && totalSpent > totalBudget
-  const isNear = !isOver && pct >= 80
+  const isNear = !isOver && totalBudget !== null && pct <= 20
   const barColor = isOver
     ? "bg-destructive"
     : isNear
@@ -36,8 +37,8 @@ export function BudgetSummaryCard({
       ) : (
         <div className="space-y-2">
           <div className="flex items-baseline justify-between">
-            <span className={`text-lg font-bold tabular-nums ${isOver ? "text-destructive" : ""}`}>
-              {formatINR(totalSpent)}
+            <span className={`text-lg font-bold tabular-nums ${isOver ? "text-destructive" : isNear ? "text-warning" : ""}`}>
+              {isOver ? `−${formatINR(Math.abs(remaining))}` : formatINR(remaining)}
             </span>
             <span className="text-xs text-muted-foreground">of {formatINR(totalBudget)}</span>
           </div>
@@ -48,18 +49,11 @@ export function BudgetSummaryCard({
             />
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-[11px] text-muted-foreground">{pct.toFixed(0)}% used</span>
-            {isOver && (
-              <span className="flex items-center gap-1 text-[11px] font-medium text-destructive">
-                <AlertTriangle className="h-3 w-3" />
-                Over by {formatINR(totalSpent - totalBudget)}
-              </span>
-            )}
-            {isNear && (
-              <span className="flex items-center gap-1 text-[11px] font-medium text-warning">
-                <AlertTriangle className="h-3 w-3" />
-                Approaching limit
-              </span>
+            <span className={`text-[11px] ${isOver ? "text-destructive font-medium" : "text-muted-foreground"}`}>
+              {isOver ? "Over budget" : `${pct.toFixed(0)}% remaining`}
+            </span>
+            {isNear && !isOver && (
+              <span className="text-[11px] font-medium text-warning">Approaching limit</span>
             )}
           </div>
         </div>

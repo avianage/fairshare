@@ -19,6 +19,11 @@ enum SplitType {
   SHARES
 }
 
+enum BudgetModel {
+  PERSONAL_SHARE
+  NET_PAYMENT
+}
+
 enum ExpenseCategory {
   FOOD
   TRANSPORT
@@ -42,8 +47,9 @@ model User {
   avatar              String?
   isAdmin             Boolean   @default(false)
   isBanned            Boolean   @default(false)
-  totalMonthlyBudget  Decimal?  @db.Decimal(12, 2)
-  createdAt           DateTime  @default(now())
+  totalMonthlyBudget  Decimal?    @db.Decimal(12, 2)
+  budgetModel         BudgetModel @default(NET_PAYMENT)
+  createdAt           DateTime    @default(now())
   updatedAt           DateTime  @updatedAt
 
   memberships         GroupMember[]

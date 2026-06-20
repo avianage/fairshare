@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { getPairwiseBalance } from "@/lib/globalBalances"
-import { formatINR, formatRelativeTime } from "@/lib/format"
+import { formatINR, formatExpenseDate } from "@/lib/format"
 import { PairwiseSettleButton } from "@/components/balances/PairwiseSettleButton"
 import { cn } from "@/lib/utils"
 
@@ -106,7 +106,7 @@ export default async function PairwiseBalancePage({
                         {e.groupName ?? "Direct"}
                       </span>
                       {youPaid ? "You paid" : `${e.payer.name} paid`} ·{" "}
-                      {formatRelativeTime(e.date)}
+                      {formatExpenseDate(e.date)}
                     </p>
                   </div>
                   <div className="shrink-0 text-right">

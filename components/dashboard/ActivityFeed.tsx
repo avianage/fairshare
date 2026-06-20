@@ -1,5 +1,5 @@
 import { categoryMeta } from "@/lib/categories"
-import { formatINR as inr, formatRelativeTime } from "@/lib/format"
+import { formatINR as inr, formatExpenseDate } from "@/lib/format"
 
 type Activity = {
   type: "expense" | "settlement"
@@ -58,7 +58,7 @@ export function ActivityFeed({ activity }: { activity: Activity[] }) {
                   {inr(a.amount)}
                 </p>
                 <p className="text-[10px] text-muted-foreground mt-0.5">
-                  {formatRelativeTime(a.date)}
+                  {formatExpenseDate(a.date)}
                 </p>
               </div>
             </li>
