@@ -63,6 +63,14 @@ export function SidebarNav({ showAdmin }: { showAdmin?: boolean }) {
   )
 }
 
+function mobilePageContext(pathname: string): { initialGroupId?: string; initialMode?: "solo" | "person" | "anyone" } {
+  const groupMatch = pathname.match(/^\/groups\/([^/]+)/)
+  if (groupMatch && groupMatch[1] !== "new") return { initialGroupId: groupMatch[1] }
+  if (pathname === "/personal") return { initialMode: "solo" }
+  if (pathname.startsWith("/direct-expenses/")) return { initialMode: "person" }
+  return {}
+}
+
 /** Horizontal bottom nav for mobile screens. */
 export function MobileNav({
   currentUser,
@@ -72,6 +80,7 @@ export function MobileNav({
 }) {
   const pathname = usePathname()
   const [modalOpen, setModalOpen] = useState(false)
+  const ctx = mobilePageContext(pathname)
 
   // Split mobile links around the center "+" button
   const left = mobileLinks.slice(0, 2)
@@ -146,6 +155,8 @@ export function MobileNav({
           open={modalOpen}
           onClose={() => setModalOpen(false)}
           currentUser={currentUser}
+          initialGroupId={ctx.initialGroupId}
+          initialMode={ctx.initialMode}
         />
       )}
     </>
