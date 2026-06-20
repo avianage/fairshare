@@ -292,7 +292,7 @@ export function ExpenseCard({
       <ConfirmDialog
         open={confirmingDelete}
         title="Delete this expense?"
-        description={`"${expense.description}" will be removed from the group's balances.`}
+        description={`"${expense.description}" will be permanently removed and balances will recalculate. Any payments already made to settle debts from this expense will not be reversed.`}
         confirmLabel="Delete"
         destructive
         busy={deleting}

@@ -55,6 +55,8 @@ export function GroupSettings({
   // Confirmation flow shared by leave / delete / remove-member.
   const [pending, setPending] = useState<Pending>(null)
   const [busy, setBusy] = useState(false)
+  const [checkingBalance, setCheckingBalance] = useState(false)
+  const [deleteBlocked, setDeleteBlocked] = useState(false)
 
   async function saveDetails(e: React.FormEvent) {
     e.preventDefault()
@@ -136,6 +138,24 @@ export function GroupSettings({
       setTimeout(() => setCopied(false), 2000)
     } catch {
       /* clipboard may be unavailable; the URL is still visible to copy */
+    }
+  }
+
+  async function handleDeleteClick() {
+    setDeleteBlocked(false)
+    setCheckingBalance(true)
+    try {
+      const res = await fetch(`/api/groups/${group.id}/balances`)
+      const data = res.ok ? await res.json() : null
+      if (!data?.isSettledUp) {
+        setDeleteBlocked(true)
+        return
+      }
+      setPending({ kind: "delete" })
+    } catch {
+      toast.error("Could not check group balances.")
+    } finally {
+      setCheckingBalance(false)
     }
   }
 
@@ -322,6 +342,11 @@ export function GroupSettings({
       {/* Danger zone */}
       <section className="rounded-xl border border-destructive/30 bg-card p-6">
         <h2 className="font-medium text-destructive">Danger zone</h2>
+        {deleteBlocked && (
+          <p className="mt-3 text-sm text-destructive">
+            This group has unsettled balances. Settle all debts between members before deleting the group.
+          </p>
+        )}
         <div className="mt-4 flex flex-wrap gap-3">
           <Button
             type="button"
@@ -335,10 +360,10 @@ export function GroupSettings({
             <Button
               type="button"
               variant="destructive"
-              onClick={() => setPending({ kind: "delete" })}
-              disabled={busy}
+              onClick={handleDeleteClick}
+              disabled={busy || checkingBalance}
             >
-              Delete group
+              {checkingBalance ? "Checking…" : "Delete group"}
             </Button>
           )}
         </div>
@@ -357,7 +382,7 @@ export function GroupSettings({
       <ConfirmDialog
         open={pending?.kind === "delete"}
         title="Delete this group?"
-        description="This deletes the group for everyone. It can't be undone from the app."
+        description="All balances are settled. Deleting the group will permanently remove it for every member. This cannot be undone."
         confirmLabel="Delete group"
         destructive
         busy={busy}
