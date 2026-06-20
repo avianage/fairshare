@@ -33,7 +33,7 @@ enum ExpenseCategory {
 }
 
 model User {
-  id                  String    @id @default(cuid())
+  id                  String    @id @default(uuid())
   name                String
   email               String    @unique
   username            String?   @unique
@@ -56,20 +56,26 @@ model User {
   friendships         Friendship[]        @relation("FriendshipUser")
   friendOf            Friendship[]        @relation("FriendshipFriend")
   friendInvitesSent   FriendInvite[]      @relation("FriendInviteOwner")
+  friendRequestsSent  FriendRequest[]     @relation("FriendRequestSent")
+  friendRequestsRecvd FriendRequest[]     @relation("FriendRequestReceived")
   pushSubscriptions   PushSubscription[]
   budgets             Budget[]
+  ownedGroups         Group[]             @relation("GroupOwner")
 }
 
 model Group {
-  id          String    @id @default(cuid())
-  name        String
-  emoji       String?
-  description String?
-  currency    String    @default("INR")
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
+  id                 String    @id @default(cuid())
+  name               String
+  emoji              String?
+  description        String?
+  currency           String    @default("INR")
+  ownerId            String
+  allowMemberInvites Boolean   @default(false)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+  deletedAt          DateTime?
 
+  owner       User          @relation("GroupOwner", fields: [ownerId], references: [id])
   members     GroupMember[]
   invites     GroupInvite[]
   expenses    Expense[]
@@ -92,7 +98,7 @@ model GroupMember {
 
 model GroupInvite {
   id          String    @id @default(cuid())
-  token       String    @unique @default(cuid())
+  token       String    @unique
   groupId     String
   invitedById String
   expiresAt   DateTime
@@ -107,7 +113,7 @@ model GroupInvite {
 }
 
 model Expense {
-  id          String          @id @default(cuid())
+  id          String          @id @default(uuid())
   // Nullable: a null groupId marks a *direct* (non-group) expense whose
   // members live in DirectParticipant instead of GroupMember.
   groupId     String?
@@ -193,6 +199,20 @@ model Friendship {
 
   @@unique([userId, friendId])
   @@index([userId])
+}
+
+model FriendRequest {
+  id         String   @id @default(cuid())
+  senderId   String
+  receiverId String
+  createdAt  DateTime @default(now())
+
+  sender   User @relation("FriendRequestSent",     fields: [senderId],   references: [id], onDelete: Cascade)
+  receiver User @relation("FriendRequestReceived", fields: [receiverId], references: [id], onDelete: Cascade)
+
+  @@unique([senderId, receiverId])
+  @@index([senderId])
+  @@index([receiverId])
 }
 
 model FriendInvite {

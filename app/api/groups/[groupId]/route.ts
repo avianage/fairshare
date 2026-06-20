@@ -14,11 +14,15 @@ const emojiSchema = z
   .min(1)
   .refine((s) => Array.from(s).length <= 8, "Emoji must be a single emoji")
 
+const CURRENCIES = ["INR", "USD", "EUR", "GBP", "AED", "SGD", "JPY"] as const
+
 const updateGroupSchema = z
   .object({
     name: z.string().trim().min(2).max(50).optional(),
     emoji: emojiSchema.nullable().optional(),
     description: z.string().trim().max(500).nullable().optional(),
+    currency: z.enum(CURRENCIES).optional(),
+    allowMemberInvites: z.boolean().optional(),
   })
   .refine((data) => Object.keys(data).length > 0, "No fields to update")
 
@@ -48,6 +52,8 @@ export async function GET(_request: NextRequest, { params }: Params) {
       emoji: true,
       description: true,
       currency: true,
+      ownerId: true,
+      allowMemberInvites: true,
       createdAt: true,
       updatedAt: true,
       members: {
@@ -79,6 +85,8 @@ export async function GET(_request: NextRequest, { params }: Params) {
       emoji: group.emoji,
       description: group.description,
       currency: group.currency,
+      ownerId: group.ownerId,
+      allowMemberInvites: group.allowMemberInvites,
       createdAt: group.createdAt,
       updatedAt: group.updatedAt,
       members,
@@ -120,10 +128,15 @@ export async function PATCH(request: NextRequest, { params }: Params) {
   // Guard against acting on an already soft-deleted group.
   const existing = await prisma.group.findFirst({
     where: { id: params.groupId, deletedAt: null },
-    select: { id: true },
+    select: { id: true, ownerId: true },
   })
   if (!existing) {
     return NextResponse.json({ error: "Not found" }, { status: 404 })
+  }
+
+  // allowMemberInvites can only be toggled by the group owner.
+  if ("allowMemberInvites" in parsed.data && existing.ownerId !== session.user.id) {
+    return NextResponse.json({ error: "Only the group owner can change invite permissions." }, { status: 403 })
   }
 
   const group = await prisma.group.update({
@@ -135,6 +148,8 @@ export async function PATCH(request: NextRequest, { params }: Params) {
       emoji: true,
       description: true,
       currency: true,
+      ownerId: true,
+      allowMemberInvites: true,
       updatedAt: true,
     },
   })
