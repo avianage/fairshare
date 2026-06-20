@@ -60,7 +60,7 @@ export default async function ProfilePage() {
   const quickLinks = [
     { href: "/personal", icon: Wallet, label: "Personal Expenses", description: "Individual expenses not tied to a group" },
     { href: "/friends", icon: UserPlus, label: "Friends", description: "Manage your friends and requests" },
-    { href: "/balances", icon: Scale, label: "Balances", description: "See who owes you and what you owe" },
+    { href: "/ledger", icon: Scale, label: "Ledger", description: "See who owes you and what you owe" },
     { href: "/budgets", icon: PiggyBank, label: "Budgets", description: "Set and track your spending limits" },
     { href: "/insights", icon: TrendingUp, label: "Insights", description: "Spending trends and analytics" },
     ...(session.user.isAdmin ? [{ href: "/admin", icon: ShieldCheck, label: "Admin Panel", description: "Manage users and platform settings" }] : []),

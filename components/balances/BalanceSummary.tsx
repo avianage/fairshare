@@ -32,7 +32,7 @@ export function BalanceSummary({
   const load = useCallback(async () => {
     setError(null)
     try {
-      const res = await fetch(`/api/groups/${groupId}/balances`, {
+      const res = await fetch(`/api/groups/${groupId}/ledger`, {
         cache: "no-store",
       })
       if (!res.ok) {

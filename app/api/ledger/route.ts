@@ -5,7 +5,7 @@ import { getGlobalDebts } from "@/lib/globalBalances"
 
 export const runtime = "nodejs"
 
-// GET /api/balances — net debts for the current user across groups + direct
+// GET /api/ledger — net debts for the current user across groups + direct
 // expenses. Cached for 30s per user (keyed by userId, so one user's cache can
 // never serve another's balances).
 export async function GET() {

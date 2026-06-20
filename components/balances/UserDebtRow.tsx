@@ -25,7 +25,7 @@ export function UserDebtRow({ userId, name, avatar, amount, tone }: UserDebtRowP
   return (
     <div className="flex items-center gap-2 rounded-xl border bg-card shadow-sm transition-colors hover:border-primary/40 hover:bg-accent/40">
       <Link
-        href={`/balances/${userId}`}
+        href={`/ledger/${userId}`}
         className="flex flex-1 items-center gap-3 p-3 min-w-0"
       >
         <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-sm font-semibold text-primary">

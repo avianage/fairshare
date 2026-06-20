@@ -50,7 +50,7 @@ export default async function ExpenseDetailPage({
   const canManage = session.user.isAdmin === true || expense.payer.id === userId
 
   // Back link: group page or the other person's direct-expense view
-  let backHref = "/balances"
+  let backHref = "/ledger"
   if (isGroup) {
     backHref = `/groups/${expense.groupId}`
   } else {

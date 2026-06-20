@@ -125,7 +125,7 @@ export async function POST(request: NextRequest, { params }: Params) {
   void sendPushToUsers([receiverId], {
     title: `${settlement.sender.name} paid you`,
     body: `₹${amount.toFixed(2)} in ${group?.name ?? "a group"}`,
-    url: `/balances`,
+    url: `/ledger`,
   })
 
   return NextResponse.json(

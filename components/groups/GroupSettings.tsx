@@ -260,7 +260,7 @@ export function GroupSettings({
     setDeleteBlocked(false)
     setCheckingBalance(true)
     try {
-      const res = await fetch(`/api/groups/${group.id}/balances`)
+      const res = await fetch(`/api/groups/${group.id}/ledger`)
       const data = res.ok ? await res.json() : null
       if (!data?.isSettledUp) {
         setDeleteBlocked(true)

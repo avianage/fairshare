@@ -6,9 +6,9 @@ import { UserDebtRow } from "@/components/balances/UserDebtRow"
 import { Confetti } from "@/components/balances/Confetti"
 import { cn } from "@/lib/utils"
 
-export const metadata = { title: "Who Owes Whom · Fairshare" }
+export const metadata = { title: "Ledger · Fairshare" }
 
-export default async function BalancesPage() {
+export default async function LedgerPage() {
   const session = await auth()
   if (!session?.user?.id) redirect("/login")
 
@@ -18,7 +18,7 @@ export default async function BalancesPage() {
   return (
     <div className="space-y-8">
       <div className="hidden md:block">
-        <h1 className="text-2xl font-semibold">Who owes whom</h1>
+        <h1 className="text-2xl font-semibold">Ledger</h1>
         <p className="mt-1 text-sm text-muted-foreground">
           Your net balances across every group and direct expense.
         </p>

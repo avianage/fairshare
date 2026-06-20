@@ -73,7 +73,7 @@ export function SummaryCards({
           </Card>
         )
         return isNetBalance ? (
-          <Link key={it.label} href="/balances" className="block">{card}</Link>
+          <Link key={it.label} href="/ledger" className="block">{card}</Link>
         ) : (
           <div key={it.label} className="block">{card}</div>
         )

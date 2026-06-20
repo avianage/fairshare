@@ -1,3 +1,6 @@
+"use client"
+
+import { useEffect, useRef, useState } from "react"
 import { categoryMeta } from "@/lib/categories"
 import { formatINR as inr, formatExpenseDate } from "@/lib/format"
 
@@ -11,7 +14,43 @@ type Activity = {
   involvedUsers: { name: string }[]
 }
 
-export function ActivityFeed({ activity }: { activity: Activity[] }) {
+export function ActivityFeed({ activity: initialActivity }: { activity: Activity[] }) {
+  const [activity, setActivity] = useState<Activity[]>(initialActivity)
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  useEffect(() => {
+    async function refresh() {
+      try {
+        const res = await fetch("/api/dashboard", { cache: "no-store" })
+        if (!res.ok) return
+        const data = await res.json()
+        if (Array.isArray(data.recentActivity)) setActivity(data.recentActivity)
+      } catch {
+        // silently ignore network errors
+      }
+    }
+
+    timerRef.current = setInterval(refresh, 30_000)
+    return () => { if (timerRef.current) clearInterval(timerRef.current) }
+  }, [])
+
+  // Also refresh whenever the tab becomes visible again (user switching tabs)
+  useEffect(() => {
+    async function onVisible() {
+      if (document.visibilityState !== "visible") return
+      try {
+        const res = await fetch("/api/dashboard", { cache: "no-store" })
+        if (!res.ok) return
+        const data = await res.json()
+        if (Array.isArray(data.recentActivity)) setActivity(data.recentActivity)
+      } catch {
+        // silently ignore
+      }
+    }
+    document.addEventListener("visibilitychange", onVisible)
+    return () => document.removeEventListener("visibilitychange", onVisible)
+  }, [])
+
   if (activity.length === 0) {
     return (
       <div className="rounded-xl border border-dashed bg-card p-8 text-center">
@@ -43,7 +82,7 @@ export function ActivityFeed({ activity }: { activity: Activity[] }) {
               }`}>
                 {isSettlement ? "💸" : categoryMeta(a.category ?? "OTHER").icon}
               </span>
-              
+
               <div className="min-w-0 flex-1 pt-0.5">
                 <p className="truncate text-sm font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary">
                   {a.description}

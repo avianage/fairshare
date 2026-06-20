@@ -7,7 +7,7 @@ type Params = { params: { groupId: string } }
 
 const UNKNOWN: MemberInfo = { id: "", name: "Unknown", avatar: null }
 
-// GET /api/groups/[groupId]/balances — simplified debts + per-member net balances.
+// GET /api/groups/[groupId]/ledger — simplified debts + per-member net balances.
 export async function GET(_request: NextRequest, { params }: Params) {
   const session = await auth()
   if (!session?.user?.id) {

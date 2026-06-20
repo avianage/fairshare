@@ -12,7 +12,7 @@ const baseLinks = [
   { href: "/groups", label: "Groups", icon: Users },
   { href: "/personal", label: "Personal", icon: Wallet },
   { href: "/budgets", label: "Budgets", icon: PiggyBank },
-  { href: "/balances", label: "Balances", icon: Scale },
+  { href: "/ledger", label: "Ledger", icon: Scale },
   { href: "/insights", label: "Insights", icon: TrendingUp },
   { href: "/friends", label: "Friends", icon: UserPlus },
   { href: "/profile", label: "Profile", icon: User },
@@ -22,7 +22,7 @@ const baseLinks = [
 const mobileLinks = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
   { href: "/groups", label: "Groups", icon: Users },
-  { href: "/balances", label: "Balances", icon: Scale },
+  { href: "/ledger", label: "Ledger", icon: Scale },
   { href: "/profile", label: "Profile", icon: User },
 ]
 
