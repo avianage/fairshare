@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, Users, Scale, User, ShieldCheck, UserPlus, Wallet, Plus } from "lucide-react"
+import { LayoutDashboard, Users, Scale, User, ShieldCheck, UserPlus, Wallet, Plus, TrendingUp } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { AddExpenseModal } from "@/components/fab/AddExpenseModal"
 
@@ -12,6 +12,7 @@ const baseLinks = [
   { href: "/groups", label: "Groups", icon: Users },
   { href: "/personal", label: "Personal", icon: Wallet },
   { href: "/balances", label: "Balances", icon: Scale },
+  { href: "/insights", label: "Insights", icon: TrendingUp },
   { href: "/friends", label: "Friends", icon: UserPlus },
   { href: "/profile", label: "Profile", icon: User },
 ]
