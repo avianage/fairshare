@@ -85,40 +85,46 @@ export default async function PairwiseBalancePage({
         <ul className="divide-y rounded-xl border bg-card shadow-sm">
           {expenses.map((e) => {
             const youPaid = e.payer.id === session.user.id
+            const href = `/expenses/${e.id}`
             return (
-              <li key={e.id} className="flex items-center gap-3 px-4 py-3">
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{e.description}</p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    <span
+              <li key={e.id}>
+                <Link
+                  href={href}
+                  className="flex items-center gap-3 px-4 py-3 hover:bg-accent/50 transition-colors"
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate font-medium">{e.description}</p>
+                    <p className="truncate text-xs text-muted-foreground">
+                      <span
+                        className={cn(
+                          "mr-1.5 rounded px-1.5 py-0.5 text-[10px] font-medium",
+                          e.groupName
+                            ? "bg-primary/10 text-primary"
+                            : "bg-muted text-muted-foreground"
+                        )}
+                      >
+                        {e.groupName ?? "Direct"}
+                      </span>
+                      {youPaid ? "You paid" : `${e.payer.name} paid`} ·{" "}
+                      {formatRelativeTime(e.date)}
+                    </p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="font-semibold tabular-nums">
+                      {formatINR(e.amount)}
+                    </p>
+                    <p
                       className={cn(
-                        "mr-1.5 rounded px-1.5 py-0.5 text-[10px] font-medium",
-                        e.groupName
-                          ? "bg-primary/10 text-primary"
-                          : "bg-muted text-muted-foreground"
+                        "text-xs tabular-nums",
+                        youPaid ? "text-success" : "text-warning"
                       )}
                     >
-                      {e.groupName ?? "Direct"}
-                    </span>
-                    {youPaid ? "You paid" : `${e.payer.name} paid`} ·{" "}
-                    {formatRelativeTime(e.date)}
-                  </p>
-                </div>
-                <div className="shrink-0 text-right">
-                  <p className="font-semibold tabular-nums">
-                    {formatINR(e.amount)}
-                  </p>
-                  <p
-                    className={cn(
-                      "text-xs tabular-nums",
-                      youPaid ? "text-success" : "text-warning"
-                    )}
-                  >
-                    {youPaid
-                      ? `${other.name} owes ${formatINR(e.theirShare)}`
-                      : `you owe ${formatINR(e.yourShare)}`}
-                  </p>
-                </div>
+                      {youPaid
+                        ? `${other.name} owes ${formatINR(e.theirShare)}`
+                        : `you owe ${formatINR(e.yourShare)}`}
+                    </p>
+                  </div>
+                </Link>
               </li>
             )
           })}

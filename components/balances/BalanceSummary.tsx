@@ -123,22 +123,22 @@ export function BalanceSummary({
           if (iOwe) {
             label = (
               <>
-                You owe <span className="font-medium">{debt.to.name}</span>
+                You owe <span className="font-semibold text-primary">{debt.to.name}</span>
               </>
             )
             amountClass = "text-warning"
           } else if (owedToMe) {
             label = (
               <>
-                <span className="font-medium">{debt.from.name}</span> owes you
+                <span className="font-semibold text-primary">{debt.from.name}</span> owes you
               </>
             )
             amountClass = "text-success"
           } else {
             label = (
               <>
-                <span className="font-medium">{debt.from.name}</span> owes{" "}
-                <span className="font-medium">{debt.to.name}</span>
+                <span className="font-semibold text-primary">{debt.from.name}</span> owes{" "}
+                <span className="font-semibold text-primary">{debt.to.name}</span>
               </>
             )
             amountClass = "text-foreground"
@@ -155,13 +155,15 @@ export function BalanceSummary({
                   {formatMoney(debt.amount, currency)}
                 </p>
               </div>
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => setSettling(debt)}
-              >
-                Settle up
-              </Button>
+              {iOwe && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setSettling(debt)}
+                >
+                  Settle up
+                </Button>
+              )}
             </li>
           )
         })}

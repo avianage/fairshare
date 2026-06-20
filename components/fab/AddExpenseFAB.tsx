@@ -5,18 +5,28 @@ import { usePathname } from "next/navigation"
 import { Plus } from "lucide-react"
 import { AddExpenseModal } from "@/components/fab/AddExpenseModal"
 
-/** Extract a groupId when on a group detail page (not /groups or /groups/new). */
-function groupContext(pathname: string): string | undefined {
-  const m = pathname.match(/^\/groups\/([^/]+)/)
-  if (!m) return undefined
-  const id = m[1]
-  if (id === "new") return undefined
-  return id
+type PageContext = {
+  initialGroupId?: string
+  initialMode?: "solo" | "person" | "anyone"
+}
+
+/** Derive FAB context from the current pathname. */
+function pageContext(pathname: string): PageContext {
+  // Group detail page → pre-select that group
+  const groupMatch = pathname.match(/^\/groups\/([^/]+)/)
+  if (groupMatch && groupMatch[1] !== "new") {
+    return { initialGroupId: groupMatch[1] }
+  }
+  // Personal page → jump straight to solo form
+  if (pathname === "/personal") return { initialMode: "solo" }
+  // Direct-expenses contact view → jump straight to "a person" form
+  if (pathname.startsWith("/direct-expenses/")) return { initialMode: "person" }
+  return {}
 }
 
 /**
  * Persistent floating "Add expense" button, rendered on every authenticated
- * page. On a group page it pre-selects that group and skips the target picker.
+ * page. Context-aware: pre-selects the relevant form based on the current page.
  */
 export function AddExpenseFAB({
   currentUser,
@@ -25,7 +35,7 @@ export function AddExpenseFAB({
 }) {
   const pathname = usePathname()
   const [open, setOpen] = useState(false)
-  const initialGroupId = groupContext(pathname ?? "")
+  const ctx = pageContext(pathname ?? "")
 
   return (
     <>
@@ -42,7 +52,8 @@ export function AddExpenseFAB({
         open={open}
         onClose={() => setOpen(false)}
         currentUser={currentUser}
-        initialGroupId={initialGroupId}
+        initialGroupId={ctx.initialGroupId}
+        initialMode={ctx.initialMode}
       />
     </>
   )

@@ -16,14 +16,17 @@ export function AddExpenseModal({
   onClose,
   currentUser,
   initialGroupId,
+  initialMode,
 }: {
   open: boolean
   onClose: () => void
   currentUser: { id: string; name: string }
   initialGroupId?: string
+  initialMode?: "solo" | "person" | "anyone"
 }) {
   const router = useRouter()
-  const [mode, setMode] = useState<Mode>(initialGroupId ? "group" : "choose")
+  const startMode: Mode = initialGroupId ? "group" : (initialMode ?? "choose")
+  const [mode, setMode] = useState<Mode>(startMode)
   const [groupId, setGroupId] = useState<string | undefined>(initialGroupId)
   const [groups, setGroups] = useState<GroupOption[] | null>(null)
   const [members, setMembers] = useState<Member[] | null>(null)
@@ -31,11 +34,11 @@ export function AddExpenseModal({
   // Reset to the right starting step each time the modal opens.
   useEffect(() => {
     if (open) {
-      setMode(initialGroupId ? "group" : "choose")
+      setMode(initialGroupId ? "group" : (initialMode ?? "choose"))
       setGroupId(initialGroupId)
       setMembers(null)
     }
-  }, [open, initialGroupId])
+  }, [open, initialGroupId, initialMode])
 
   // Prevent background scrolling when modal is open
   useEffect(() => {
@@ -82,7 +85,7 @@ export function AddExpenseModal({
     )
   }
 
-  const showBack = mode !== "choose" && !initialGroupId
+  const showBack = mode !== "choose" && !initialGroupId && !initialMode
 
   return (
     <div

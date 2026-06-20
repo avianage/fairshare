@@ -256,6 +256,7 @@ export type SharedExpense = {
   description: string
   amount: number
   date: Date
+  groupId: string | null
   groupName: string | null // null = direct expense
   payer: { id: string; name: string }
   yourShare: number
@@ -329,6 +330,7 @@ export async function getPairwiseBalance(
       description: e.description,
       amount: Number(e.amount),
       date: e.date,
+      groupId: e.groupId,
       groupName: e.group?.name ?? null,
       payer: e.payer,
       yourShare,

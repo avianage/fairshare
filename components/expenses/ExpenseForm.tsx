@@ -6,6 +6,7 @@ import { getApiError } from "@/lib/api-error"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { NativeSelect } from "@/components/ui/native-select"
 import { CategorySelect } from "@/components/expenses/CategorySelect"
 import {
   SplitTypeSelector,
