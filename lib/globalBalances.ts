@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma"
 import { directExpenseVisibilityWhere } from "@/lib/directExpenses"
+import { buildRawDebts, simplifyDebts, type RawDebt } from "@/lib/splitEngine"
 
 export type ContextualDebt = {
   groupId: string | null
@@ -86,6 +87,20 @@ export type DebtUser = {
   name: string
   avatar: string | null
   amount: number
+}
+
+export type DebtContext = {
+  groupId: string | null
+  groupName: string | null // null = direct expenses
+  amount: number           // positive = they owe you
+}
+
+export type BilateralEntry = {
+  userId: string
+  name: string
+  avatar: string | null
+  total: number
+  contexts: DebtContext[]
 }
 
 export type GlobalDebts = {
@@ -196,6 +211,141 @@ export async function getGlobalDebts(userId: string): Promise<GlobalDebts> {
   const totalOwed = owedToYou.reduce((a, r) => a + r.amount, 0)
   const totalOwe = youOwe.reduce((a, r) => a + r.amount, 0)
   const netBalance = Math.round((totalOwed - totalOwe) * 100) / 100
+
+  return { owedToYou, youOwe, netBalance }
+}
+
+/**
+ * Same as getGlobalDebts but also returns per-group/direct context breakdown
+ * for each counterparty, so the UI can show "Group A: ₹200 / Direct: ₹50".
+ */
+export async function getGlobalDebtsWithContext(
+  userId: string
+): Promise<{ owedToYou: BilateralEntry[]; youOwe: BilateralEntry[]; netBalance: number }> {
+  const memberships = await prisma.groupMember.findMany({
+    where: { userId },
+    select: { groupId: true },
+  })
+  const groupIds = memberships.map((m) => m.groupId)
+
+  const [groupExpenses, directExpenses, settlements] = await Promise.all([
+    groupIds.length
+      ? prisma.expense.findMany({
+          where: {
+            groupId: { in: groupIds },
+            deletedAt: null,
+            OR: [{ payerId: userId }, { splits: { some: { userId } } }],
+          },
+          select: {
+            groupId: true,
+            group: { select: { name: true } },
+            payerId: true,
+            splits: { select: { userId: true, amount: true } },
+          },
+        })
+      : Promise.resolve([]),
+    prisma.expense.findMany({
+      where: directExpenseVisibilityWhere(userId),
+      select: {
+        payerId: true,
+        splits: { select: { userId: true, amount: true } },
+      },
+    }),
+    prisma.settlement.findMany({
+      where: { OR: [{ senderId: userId }, { receiverId: userId }] },
+      select: { senderId: true, receiverId: true, amount: true, groupId: true },
+    }),
+  ])
+
+  // counterparty → contextKey → { net, groupId, groupName }
+  type CtxValue = { net: number; groupId: string | null; groupName: string | null }
+  const ctxMap = new Map<string, Map<string, CtxValue>>()
+
+  const bump = (counterparty: string, groupId: string | null, groupName: string | null, delta: number) => {
+    if (!ctxMap.has(counterparty)) ctxMap.set(counterparty, new Map())
+    const key = groupId ?? "__direct__"
+    const inner = ctxMap.get(counterparty)!
+    if (!inner.has(key)) inner.set(key, { net: 0, groupId, groupName })
+    inner.get(key)!.net += delta
+  }
+
+  for (const e of groupExpenses) {
+    const gid = e.groupId!
+    const gname = e.group?.name ?? null
+    if (e.payerId === userId) {
+      for (const s of e.splits) {
+        if (s.userId !== userId) bump(s.userId, gid, gname, Number(s.amount))
+      }
+    } else {
+      const mine = e.splits.find((s) => s.userId === userId)
+      if (mine) bump(e.payerId, gid, gname, -Number(mine.amount))
+    }
+  }
+  for (const e of directExpenses) {
+    if (e.payerId === userId) {
+      for (const s of e.splits) {
+        if (s.userId !== userId) bump(s.userId, null, null, Number(s.amount))
+      }
+    } else {
+      const mine = e.splits.find((s) => s.userId === userId)
+      if (mine) bump(e.payerId, null, null, -Number(mine.amount))
+    }
+  }
+  for (const s of settlements) {
+    const amt = Number(s.amount)
+    if (s.senderId === userId) bump(s.receiverId, s.groupId ?? null, null, amt)
+    else if (s.receiverId === userId) bump(s.senderId, s.groupId ?? null, null, -amt)
+  }
+
+  // Collect counterparties with meaningful net balance
+  const allIds: string[] = []
+  const rows: { id: string; total: number; contexts: DebtContext[] }[] = []
+  for (const [cpId, inner] of ctxMap.entries()) {
+    const contexts: DebtContext[] = []
+    let total = 0
+    for (const { net, groupId, groupName } of inner.values()) {
+      const r = Math.round(net * 100) / 100
+      if (Math.abs(r) >= 0.01) {
+        contexts.push({ groupId, groupName, amount: r })
+        total += r
+      }
+    }
+    total = Math.round(total * 100) / 100
+    if (Math.abs(total) >= 0.01) {
+      allIds.push(cpId)
+      rows.push({ id: cpId, total, contexts })
+    }
+  }
+
+  const users = allIds.length
+    ? await prisma.user.findMany({
+        where: { id: { in: allIds } },
+        select: { id: true, name: true, avatar: true },
+      })
+    : []
+  const userMap = new Map(users.map((u) => [u.id, u]))
+
+  const toEntry = (row: (typeof rows)[0]): BilateralEntry => ({
+    userId: row.id,
+    name: userMap.get(row.id)?.name ?? "Unknown",
+    avatar: userMap.get(row.id)?.avatar ?? null,
+    total: Math.abs(row.total),
+    contexts: row.contexts
+      .map((c) => ({ ...c, amount: Math.abs(c.amount) }))
+      .sort((a, b) => {
+        if (a.groupId === null) return -1
+        if (b.groupId === null) return 1
+        return (a.groupName ?? "").localeCompare(b.groupName ?? "")
+      }),
+  })
+
+  const owedToYou = rows.filter((r) => r.total > 0).map(toEntry)
+  const youOwe = rows.filter((r) => r.total < 0).map(toEntry)
+  const netBalance = Math.round(
+    (owedToYou.reduce((a, r) => a + r.total, 0) -
+      youOwe.reduce((a, r) => a + r.total, 0)) *
+      100
+  ) / 100
 
   return { owedToYou, youOwe, netBalance }
 }
@@ -361,4 +511,109 @@ export async function getPairwiseBalance(
     net: Math.round(net * 100) / 100,
     directNet: Math.round(directNet * 100) / 100,
   }
+}
+
+export type SimplifiedPayment = {
+  fromUserId: string
+  fromName: string
+  fromAvatar: string | null
+  toUserId: string
+  toName: string
+  toAvatar: string | null
+  amount: number
+}
+
+/**
+ * Runs the same greedy min-transfer simplification used by group ledgers,
+ * but across ALL of the user's groups + direct expenses combined.
+ * Needs the full multi-party debt graph (all members, not just the user)
+ * so that cross-person rerouting works correctly.
+ */
+export async function getSimplifiedGlobalPayments(
+  userId: string
+): Promise<SimplifiedPayment[]> {
+  const memberships = await prisma.groupMember.findMany({
+    where: { userId },
+    select: { groupId: true },
+  })
+  const groupIds = memberships.map((m) => m.groupId)
+
+  const [groupExpenses, directExpenses, groupSettlements, directSettlements] =
+    await Promise.all([
+      groupIds.length
+        ? prisma.expense.findMany({
+            where: { groupId: { in: groupIds }, deletedAt: null },
+            select: {
+              payerId: true,
+              splits: { select: { userId: true, amount: true } },
+            },
+          })
+        : Promise.resolve([]),
+      prisma.expense.findMany({
+        where: directExpenseVisibilityWhere(userId),
+        select: {
+          payerId: true,
+          splits: { select: { userId: true, amount: true } },
+        },
+      }),
+      groupIds.length
+        ? prisma.settlement.findMany({
+            where: { groupId: { in: groupIds } },
+            select: { senderId: true, receiverId: true, amount: true },
+          })
+        : Promise.resolve([]),
+      prisma.settlement.findMany({
+        where: {
+          groupId: null,
+          OR: [{ senderId: userId }, { receiverId: userId }],
+        },
+        select: { senderId: true, receiverId: true, amount: true },
+      }),
+    ])
+
+  const rawDebts = buildRawDebts(
+    [...groupExpenses, ...directExpenses].map((e) => ({
+      payerId: e.payerId,
+      splits: e.splits.map((s) => ({ userId: s.userId, amount: Number(s.amount) })),
+    }))
+  )
+
+  // Settlement reduces sender's debt: reverse it as a raw debt.
+  const settlementDebts: RawDebt[] = [
+    ...groupSettlements,
+    ...directSettlements,
+  ].map((s) => ({
+    fromUserId: s.receiverId,
+    toUserId: s.senderId,
+    amount: Number(s.amount),
+  }))
+
+  const simplified = simplifyDebts([...rawDebts, ...settlementDebts])
+
+  // Only keep transfers that involve the user or where both parties share
+  // expenses with the user (they appeared in the graph because of the user).
+  const relevant = simplified.filter(
+    (d) => d.fromUserId === userId || d.toUserId === userId
+  )
+
+  if (relevant.length === 0) return []
+
+  const allIds = [
+    ...new Set(relevant.flatMap((d) => [d.fromUserId, d.toUserId])),
+  ]
+  const users = await prisma.user.findMany({
+    where: { id: { in: allIds } },
+    select: { id: true, name: true, avatar: true },
+  })
+  const userMap = new Map(users.map((u) => [u.id, u]))
+
+  return relevant.map((d) => ({
+    fromUserId: d.fromUserId,
+    fromName: userMap.get(d.fromUserId)?.name ?? "Unknown",
+    fromAvatar: userMap.get(d.fromUserId)?.avatar ?? null,
+    toUserId: d.toUserId,
+    toName: userMap.get(d.toUserId)?.name ?? "Unknown",
+    toAvatar: userMap.get(d.toUserId)?.avatar ?? null,
+    amount: d.amount,
+  }))
 }

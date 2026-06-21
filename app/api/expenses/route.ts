@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { Prisma } from "@prisma/client"
 import { auth } from "@/lib/auth"
@@ -182,6 +183,7 @@ export async function POST(request: NextRequest) {
     url: "/direct-expenses",
   })
 
+  revalidatePath('/budgets')
   return NextResponse.json(
     { expense: serializeDirectExpense(expense) },
     { status: 201 }

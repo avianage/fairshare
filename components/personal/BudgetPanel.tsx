@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Plus, Pencil, Trash2, AlertTriangle, Settings2, ChevronDown, Wallet } from "lucide-react"
 import { toast } from "sonner"
@@ -499,7 +499,7 @@ const MODEL_OPTIONS: { value: BudgetModel; label: string; note: string }[] = [
   {
     value: BudgetModel.NET_PAYMENT,
     label: "Net Payment",
-    note: "Counts the full amount you paid, reduced as others settle with you.",
+    note: "Full amount you paid as payer, plus your share of expenses others paid for.",
   },
   {
     value: BudgetModel.PERSONAL_SHARE,
@@ -524,6 +524,7 @@ export function BudgetPanel({
   const router = useRouter()
   const [budgets, setBudgets] = useState<BudgetEntry[]>(initialBudgets)
   const [totalBudget, setTotalBudget] = useState<number | null>(initialTotalBudget)
+  const [totalSpent, setTotalSpent] = useState<number>(initialTotalSpent)
   const [budgetModel, setBudgetModel] = useState<BudgetModel>(initialBudgetModel)
   const [adding, setAdding] = useState(false)
   const [newCategory, setNewCategory] = useState("")
@@ -533,6 +534,9 @@ export function BudgetPanel({
   const [totalReducePending, setTotalReducePending] = useState<PendingTotalReduce | null>(null)
   const [confirming, setConfirming] = useState(false)
   const [showModelMenu, setShowModelMenu] = useState(false)
+
+  useEffect(() => { setBudgets(initialBudgets) }, [initialBudgets])
+  useEffect(() => { setTotalSpent(initialTotalSpent) }, [initialTotalSpent])
 
   const usedCategories = new Set(budgets.map((b) => b.category))
   const available = EXPENSE_CATEGORIES.filter((c) => !usedCategories.has(c.value))
@@ -710,7 +714,7 @@ export function BudgetPanel({
       <div className="space-y-6">
         {/* Total budget hero */}
         <TotalBudgetSection
-          totalSpent={initialTotalSpent}
+          totalSpent={totalSpent}
           totalBudget={totalBudget}
           onSave={saveTotalBudget}
         />

@@ -33,6 +33,13 @@ const securityHeaders = [
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: "standalone",
+  // Disable the client-side router cache for dynamic pages so that navigating
+  // to /budgets always fetches a fresh server render rather than serving a
+  // 30-second stale snapshot. Without this, revalidatePath from Route Handlers
+  // has no effect on the in-memory router cache.
+  experimental: {
+    staleTimes: { dynamic: 0 },
+  },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }]
   },

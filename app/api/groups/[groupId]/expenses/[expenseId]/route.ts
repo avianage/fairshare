@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { revalidatePath } from "next/cache"
 import { z } from "zod"
 import { Prisma } from "@prisma/client"
 import { auth } from "@/lib/auth"
@@ -158,6 +159,7 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     })
   })
 
+  revalidatePath('/budgets')
   return NextResponse.json({ expense: serializeExpense(updated) })
 }
 
@@ -205,5 +207,6 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
     data: { deletedAt: new Date() },
   })
 
+  revalidatePath('/budgets')
   return NextResponse.json({ success: true })
 }
