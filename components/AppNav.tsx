@@ -3,7 +3,7 @@
 import { useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, Users, Scale, User, ShieldCheck, UserPlus, Wallet, Plus, TrendingUp, PiggyBank } from "lucide-react"
+import { LayoutDashboard, Users, Scale, User, ShieldCheck, UserPlus, Wallet, Plus, TrendingUp, PiggyBank, ScrollText } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { AddExpenseModal } from "@/components/fab/AddExpenseModal"
 
@@ -13,6 +13,7 @@ const baseLinks = [
   { href: "/personal", label: "Personal", icon: Wallet },
   { href: "/budgets", label: "Budgets", icon: PiggyBank },
   { href: "/ledger", label: "Ledger", icon: Scale },
+  { href: "/statement", label: "Statement", icon: ScrollText },
   { href: "/insights", label: "Insights", icon: TrendingUp },
   { href: "/friends", label: "Friends", icon: UserPlus },
   { href: "/profile", label: "Profile", icon: User },
@@ -22,7 +23,7 @@ const baseLinks = [
 const mobileLinks = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
   { href: "/groups", label: "Groups", icon: Users },
-  { href: "/ledger", label: "Ledger", icon: Scale },
+  { href: "/statement", label: "Statement", icon: ScrollText },
   { href: "/profile", label: "Profile", icon: User },
 ]
 

@@ -12,6 +12,7 @@ const TITLES: Record<string, string> = {
   "/friends": "Friends",
   "/admin": "Admin",
   "/direct-expenses": "Non-group Expenses",
+  "/statement": "Statement",
 }
 
 export function MobilePageTitle() {

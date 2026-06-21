@@ -49,8 +49,8 @@ function enforceRateLimit(req: NextRequest): NextResponse | null {
 }
 
 // Routes that require an authenticated session
-const PROTECTED_PAGES = ["/dashboard", "/groups", "/profile", "/ledger", "/admin", "/friends", "/direct-expenses", "/personal", "/insights", "/budgets", "/expenses"]
-const PROTECTED_API_PREFIXES = ["/api/groups", "/api/dashboard", "/api/uploads", "/api/profile", "/api/expenses", "/api/ledger", "/api/direct-settle", "/api/users", "/api/admin", "/api/friends", "/api/friend-requests", "/api/notifications", "/api/budgets", "/api/insights"]
+const PROTECTED_PAGES = ["/dashboard", "/groups", "/profile", "/ledger", "/admin", "/friends", "/direct-expenses", "/personal", "/insights", "/budgets", "/expenses", "/statement"]
+const PROTECTED_API_PREFIXES = ["/api/groups", "/api/dashboard", "/api/uploads", "/api/profile", "/api/expenses", "/api/ledger", "/api/direct-settle", "/api/users", "/api/admin", "/api/friends", "/api/friend-requests", "/api/notifications", "/api/budgets", "/api/insights", "/api/statement"]
 // POST requires auth; GET is public (invite link previews)
 const POST_PROTECTED_API = ["/api/invite", "/api/friend-invite"]
 

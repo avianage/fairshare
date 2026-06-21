@@ -115,9 +115,14 @@ export default async function DashboardPage() {
 
       {/* Recent activity */}
       <section className="space-y-3">
-        <h2 className="text-sm font-medium text-muted-foreground">
-          Recent activity
-        </h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-medium text-muted-foreground">
+            Recent activity
+          </h2>
+          <Button variant="outline" size="sm" asChild>
+            <Link href="/statement">View all</Link>
+          </Button>
+        </div>
         <ActivityFeed activity={data.recentActivity} />
       </section>
     </div>

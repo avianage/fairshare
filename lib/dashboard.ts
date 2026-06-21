@@ -32,22 +32,31 @@ export type DashboardData = {
  * touches groups the user is CURRENTLY a member of.
  */
 export async function getDashboardData(userId: string): Promise<DashboardData> {
-  const memberships = await prisma.groupMember.findMany({
-    where: { userId, group: { deletedAt: null } },
-    select: {
-      group: {
-        select: {
-          id: true,
-          name: true,
-          emoji: true,
-          updatedAt: true,
-          _count: { select: { members: true } },
+  const [memberships, allMemberships] = await Promise.all([
+    prisma.groupMember.findMany({
+      where: { userId, group: { deletedAt: null } },
+      orderBy: { group: { updatedAt: "desc" } },
+      select: {
+        group: {
+          select: {
+            id: true,
+            name: true,
+            emoji: true,
+            updatedAt: true,
+            _count: { select: { members: true } },
+          },
         },
       },
-    },
-  })
+    }),
+    // All groups ever joined (including soft-deleted) — used only for activity feed.
+    prisma.groupMember.findMany({
+      where: { userId },
+      select: { groupId: true },
+    }),
+  ])
 
   const groupIds = memberships.map((m) => m.group.id)
+  const allGroupIds = allMemberships.map((m) => m.groupId)
 
   // Per-group net for group cards + gross per-person totals for summary cards.
   const [balancesByGroup, globalDebts] = await Promise.all([
@@ -72,11 +81,11 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
   const totalOwed = Math.round(globalDebts.owedToYou.reduce((s, r) => s + r.amount, 0) * 100) / 100
   const totalOwing = Math.round(globalDebts.youOwe.reduce((s, r) => s + r.amount, 0) * 100) / 100
 
-  // Recent activity is scoped to groupIds → never includes left groups.
+  // Recent activity includes ALL groups the user ever joined (soft-deleted included).
   const [expenses, settlements, directExpenses, directSettlements] = await Promise.all([
-    groupIds.length
+    allGroupIds.length
       ? prisma.expense.findMany({
-          where: { groupId: { in: groupIds }, deletedAt: null },
+          where: { groupId: { in: allGroupIds }, deletedAt: null },
           select: {
             description: true,
             amount: true,
@@ -90,9 +99,9 @@ export async function getDashboardData(userId: string): Promise<DashboardData> {
           take: 10,
         })
       : Promise.resolve([]),
-    groupIds.length
+    allGroupIds.length
       ? prisma.settlement.findMany({
-          where: { groupId: { in: groupIds } },
+          where: { groupId: { in: allGroupIds } },
           select: {
             amount: true,
             createdAt: true,
