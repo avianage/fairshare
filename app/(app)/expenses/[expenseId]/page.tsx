@@ -22,7 +22,7 @@ export default async function ExpenseDetailPage({
     where: {
       id: params.expenseId,
       deletedAt: null,
-      splits: { some: { userId } },
+      OR: [{ payerId: userId }, { splits: { some: { userId } } }],
     },
     select: {
       id: true,
