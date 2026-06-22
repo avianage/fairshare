@@ -2,12 +2,18 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { X, Users, User, Globe, ChevronLeft, Wallet } from "lucide-react"
+import { X, Users, User, Globe, ChevronLeft, Wallet, Plus } from "lucide-react"
 import { ExpenseForm } from "@/components/expenses/ExpenseForm"
 import { DirectExpenseForm } from "@/components/fab/DirectExpenseForm"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { NativeSelect } from "@/components/ui/native-select"
 import { cn } from "@/lib/utils"
 
-type Mode = "choose" | "group" | "person" | "anyone" | "solo"
+const CURRENCIES = ["INR", "USD", "EUR", "GBP", "JPY", "AUD", "CAD"]
+
+type Mode = "choose" | "group" | "new-group" | "person" | "anyone" | "solo"
 type Member = { id: string; name: string }
 type GroupOption = { id: string; name: string; emoji: string | null }
 
@@ -85,7 +91,7 @@ export function AddExpenseModal({
     )
   }
 
-  const showBack = mode !== "choose" && !initialGroupId && !initialMode
+  const showBack = mode !== "choose" && mode !== "new-group" && !initialGroupId && !initialMode
 
   return (
     <div
@@ -165,10 +171,6 @@ export function AddExpenseModal({
               {!groupId ? (
                 groups === null ? (
                   <p className="text-sm text-muted-foreground">Loading groups…</p>
-                ) : groups.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">
-                    You&apos;re not in any groups yet.
-                  </p>
                 ) : (
                   <ul className="space-y-2">
                     {groups.map((g) => (
@@ -183,6 +185,18 @@ export function AddExpenseModal({
                         </button>
                       </li>
                     ))}
+                    <li>
+                      <button
+                        type="button"
+                        onClick={() => setMode("new-group")}
+                        className="flex w-full items-center gap-3 rounded-lg border border-dashed p-3 text-left text-muted-foreground hover:bg-accent hover:text-foreground"
+                      >
+                        <span className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
+                          <Plus className="h-4 w-4" />
+                        </span>
+                        <span className="font-medium">Create a new group</span>
+                      </button>
+                    </li>
                   </ul>
                 )
               ) : members === null ? (
@@ -197,6 +211,18 @@ export function AddExpenseModal({
                 />
               )}
             </div>
+          )}
+
+          {/* Step 2 — create new group inline */}
+          {mode === "new-group" && (
+            <NewGroupForm
+              onBack={() => setMode("group")}
+              onCreated={(g) => {
+                setGroups((prev) => (prev ? [...prev, g] : [g]))
+                setGroupId(g.id)
+                setMode("group")
+              }}
+            />
           )}
 
           {/* Step 2 — direct expense.
@@ -222,6 +248,102 @@ export function AddExpenseModal({
         </div>
       </div>
     </div>
+  )
+}
+
+function NewGroupForm({
+  onBack,
+  onCreated,
+}: {
+  onBack: () => void
+  onCreated: (group: GroupOption) => void
+}) {
+  const [name, setName] = useState("")
+  const [emoji, setEmoji] = useState("")
+  const [currency, setCurrency] = useState("INR")
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+    setSubmitting(true)
+    try {
+      const res = await fetch("/api/groups", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: name.trim(), emoji: emoji.trim() || undefined, currency }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => null)
+        setError(data?.error ?? "Could not create group.")
+        setSubmitting(false)
+        return
+      }
+      const { group } = await res.json()
+      onCreated({ id: group.id, name: group.name, emoji: group.emoji ?? null })
+    } catch {
+      setError("Something went wrong.")
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <button
+        type="button"
+        onClick={onBack}
+        className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+      >
+        <ChevronLeft className="h-4 w-4" />
+        Back to groups
+      </button>
+
+      <div className="space-y-1">
+        <Label htmlFor="ng-name">Group name</Label>
+        <Input
+          id="ng-name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Goa Trip"
+          minLength={2}
+          maxLength={50}
+          required
+          autoFocus
+        />
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-1">
+          <Label htmlFor="ng-emoji">Emoji (optional)</Label>
+          <Input
+            id="ng-emoji"
+            value={emoji}
+            onChange={(e) => setEmoji(e.target.value)}
+            placeholder="🏖️"
+            className="text-center text-lg"
+          />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor="ng-currency">Currency</Label>
+          <NativeSelect
+            id="ng-currency"
+            value={currency}
+            onChange={(e) => setCurrency(e.target.value)}
+          >
+            {CURRENCIES.map((c) => (
+              <option key={c} value={c}>{c}</option>
+            ))}
+          </NativeSelect>
+        </div>
+      </div>
+
+      {error && <p className="text-sm text-destructive">{error}</p>}
+
+      <Button type="submit" disabled={submitting || name.trim().length < 2} className="w-full">
+        {submitting ? "Creating…" : "Create group"}
+      </Button>
+    </form>
   )
 }
 
