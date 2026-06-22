@@ -51,6 +51,7 @@ export async function GET(req: NextRequest) {
           where: {
             groupId: groupIdFilter && groupIdFilter !== "direct" ? groupIdFilter : { in: allGroupIds },
             deletedAt: null,
+            OR: [{ payerId: userId }, { splits: { some: { userId } } }],
             ...(dateRange ? { date: dateRange } : {}),
           },
           select: {
@@ -71,6 +72,7 @@ export async function GET(req: NextRequest) {
       ? prisma.settlement.findMany({
           where: {
             groupId: groupIdFilter && groupIdFilter !== "direct" ? groupIdFilter : { in: allGroupIds },
+            OR: [{ senderId: userId }, { receiverId: userId }],
             ...(dateRange ? { createdAt: dateRange } : {}),
           },
           select: {
