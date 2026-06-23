@@ -65,8 +65,8 @@ export default async function GroupsPage() {
       >
         <span className="text-2xl" aria-hidden>💸</span>
         <div className="min-w-0 flex-1">
-          <p className="font-medium">Non-group expenses</p>
-          <p className="text-xs text-muted-foreground">Individual expenses between you and others</p>
+          <p className="whitespace-nowrap font-medium">Non-group expenses</p>
+          <p className="truncate text-xs text-muted-foreground">Individual expenses between you and others</p>
         </div>
         <span className={cn(
           "shrink-0 rounded-md px-2.5 py-1 text-xs font-semibold",
@@ -101,7 +101,7 @@ export default async function GroupsPage() {
             const owes = userBalance < 0
             const even = Math.abs(userBalance) < 0.01
             return (
-              <li key={group.id}>
+              <li key={group.id} className="min-w-0">
                 <Link
                   href={`/groups/${group.id}`}
                   className={cn(
@@ -109,8 +109,8 @@ export default async function GroupsPage() {
                     even ? "border-border/60" : owes ? "border-l-4 border-l-warning" : "border-l-4 border-l-success"
                   )}
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-2xl" aria-hidden>
+                  <div className="flex min-w-0 items-center gap-3">
+                    <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent text-2xl" aria-hidden>
                       {group.emoji ?? "👥"}
                     </span>
                     <span className="truncate font-semibold tracking-tight">{group.name}</span>

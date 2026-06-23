@@ -69,7 +69,7 @@ export default async function DashboardPage() {
               const owes = g.userBalance < 0
               const even = Math.abs(g.userBalance) < 0.01
               return (
-                <li key={g.id}>
+                <li key={g.id} className="min-w-0">
                   <Link
                     href={`/groups/${g.id}`}
                     className={cn(
@@ -77,8 +77,8 @@ export default async function DashboardPage() {
                       even ? "border-border/60" : owes ? "border-l-4 border-l-warning" : "border-l-4 border-l-success"
                     )}
                   >
-                    <div className="flex items-center gap-3">
-                      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-accent text-2xl" aria-hidden>
+                    <div className="flex min-w-0 items-center gap-3">
+                      <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-accent text-2xl" aria-hidden>
                         {g.emoji ?? "👥"}
                       </span>
                       <span className="truncate font-semibold tracking-tight">{g.name}</span>
