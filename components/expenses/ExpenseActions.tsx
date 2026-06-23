@@ -67,6 +67,9 @@ export function ExpenseActions({
     toast.success("Expense updated.")
     setEditing(false)
     router.refresh()
+    window.dispatchEvent(
+      new CustomEvent("fairshare:expense-changed", { detail: { groupId } })
+    )
   }
 
   async function handleDelete() {

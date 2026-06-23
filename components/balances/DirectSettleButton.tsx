@@ -42,6 +42,7 @@ export function DirectSettleButton({
       setOpen(false)
       setBusy(false)
       router.refresh()
+      window.dispatchEvent(new CustomEvent("fairshare:expense-changed", { detail: {} }))
     } catch {
       toast.error("Something went wrong.")
       setBusy(false)

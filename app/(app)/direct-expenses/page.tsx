@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation"
 import Link from "next/link"
-import { ChevronRight } from "lucide-react"
+import { ArrowLeft, ChevronRight } from "lucide-react"
 import { auth } from "@/lib/auth"
 import { getDirectContacts } from "@/lib/directExpenses"
 import { formatINR } from "@/lib/format"
@@ -17,6 +17,14 @@ export default async function DirectExpensesPage() {
 
   return (
     <div className="space-y-6">
+      <Link
+        href="/groups"
+        className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to Groups
+      </Link>
+
       <div className="hidden md:block border-b pb-4">
         <h1 className="text-2xl font-bold tracking-tight">Non-group Expenses</h1>
         <p className="mt-1 text-sm text-muted-foreground">

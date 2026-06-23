@@ -4,6 +4,7 @@ import { ChevronRight } from "lucide-react"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { computeGroupBalances } from "@/lib/balances"
+import { getDirectContacts } from "@/lib/directExpenses"
 import { formatINR } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -31,12 +32,17 @@ export default async function GroupsPage() {
     orderBy: { group: { updatedAt: "desc" } },
   })
 
-  const balanceResults = await Promise.all(
-    memberships.map((m) => computeGroupBalances(m.group.id))
-  )
+  const [balanceResults, directContacts] = await Promise.all([
+    Promise.all(memberships.map((m) => computeGroupBalances(m.group.id))),
+    getDirectContacts(userId),
+  ])
   const balanceMap = new Map(
     memberships.map((m, i) => [m.group.id, Math.round((balanceResults[i].net[userId] ?? 0) * 100) / 100])
   )
+
+  const directNet = Math.round(
+    directContacts.reduce((sum, c) => sum + c.net, 0) * 100
+  ) / 100
 
   return (
     <div>
@@ -62,6 +68,20 @@ export default async function GroupsPage() {
           <p className="font-medium">Non-group expenses</p>
           <p className="text-xs text-muted-foreground">Individual expenses between you and others</p>
         </div>
+        <span className={cn(
+          "shrink-0 rounded-md px-2.5 py-1 text-xs font-semibold",
+          Math.abs(directNet) < 0.01
+            ? "bg-muted text-muted-foreground"
+            : directNet > 0
+              ? "bg-success/10 text-success"
+              : "bg-warning/10 text-warning"
+        )}>
+          {Math.abs(directNet) < 0.01
+            ? "Settled up"
+            : directNet > 0
+              ? `Owed ${formatINR(directNet)}`
+              : `You owe ${formatINR(-directNet)}`}
+        </span>
         <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
       </Link>
 
