@@ -18,18 +18,24 @@ export function ActivityFeed({ activity: initialActivity }: { activity: Activity
   const [activity, setActivity] = useState<Activity[]>(initialActivity)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
-  useEffect(() => {
-    async function refresh() {
-      try {
-        const res = await fetch("/api/dashboard", { cache: "no-store" })
-        if (!res.ok) return
-        const data = await res.json()
-        if (Array.isArray(data.recentActivity)) setActivity(data.recentActivity)
-      } catch {
-        // silently ignore network errors
-      }
+  async function refresh() {
+    try {
+      const res = await fetch("/api/dashboard", { cache: "no-store" })
+      if (!res.ok) return
+      const data = await res.json()
+      if (Array.isArray(data.recentActivity)) setActivity(data.recentActivity)
+    } catch {
+      // silently ignore network errors
     }
+  }
 
+  // Immediate refresh when the current user adds/edits an expense.
+  useEffect(() => {
+    window.addEventListener("fairshare:expense-changed", refresh)
+    return () => window.removeEventListener("fairshare:expense-changed", refresh)
+  }, [])
+
+  useEffect(() => {
     timerRef.current = setInterval(refresh, 30_000)
     return () => { if (timerRef.current) clearInterval(timerRef.current) }
   }, [])
@@ -38,14 +44,7 @@ export function ActivityFeed({ activity: initialActivity }: { activity: Activity
   useEffect(() => {
     async function onVisible() {
       if (document.visibilityState !== "visible") return
-      try {
-        const res = await fetch("/api/dashboard", { cache: "no-store" })
-        if (!res.ok) return
-        const data = await res.json()
-        if (Array.isArray(data.recentActivity)) setActivity(data.recentActivity)
-      } catch {
-        // silently ignore
-      }
+      await refresh()
     }
     document.addEventListener("visibilitychange", onVisible)
     return () => document.removeEventListener("visibilitychange", onVisible)

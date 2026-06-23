@@ -44,6 +44,9 @@ export function AddExpense({
             onSuccess={() => {
               setOpen(false)
               router.refresh()
+              window.dispatchEvent(
+                new CustomEvent("fairshare:expense-changed", { detail: { groupId } })
+              )
             }}
             onCancel={() => setOpen(false)}
           />
