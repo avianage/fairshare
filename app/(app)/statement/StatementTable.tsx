@@ -5,6 +5,7 @@ import Link from "next/link"
 import { ChevronLeft, ChevronRight, Filter } from "lucide-react"
 import { categoryMeta } from "@/lib/categories"
 import { formatINR, formatExpenseDate } from "@/lib/format"
+import { DatePicker } from "@/components/ui/date-picker"
 import type { StatementItem } from "@/app/api/statement/route"
 
 type Group = { id: string; name: string }
@@ -77,19 +78,21 @@ export function StatementTable({ groups }: { groups: Group[] }) {
             <option key={g.id} value={g.id}>{g.name}</option>
           ))}
         </select>
-        <input
-          type="date"
+        <DatePicker
           value={from}
-          onChange={(e) => setFrom(e.target.value)}
-          className="rounded-lg border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-          placeholder="From"
+          max={to || undefined}
+          onChange={setFrom}
+          placeholder="From date"
+          aria-label="From date"
+          className="h-9 text-sm"
         />
-        <input
-          type="date"
+        <DatePicker
           value={to}
-          onChange={(e) => setTo(e.target.value)}
-          className="rounded-lg border bg-background px-2 py-1.5 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
-          placeholder="To"
+          min={from || undefined}
+          onChange={setTo}
+          placeholder="To date"
+          aria-label="To date"
+          className="h-9 text-sm"
         />
         {(type || groupId || from || to) && (
           <button
