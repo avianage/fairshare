@@ -6,6 +6,7 @@ import { getApiError } from "@/lib/api-error"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { DatePicker } from "@/components/ui/date-picker"
 import { NativeSelect } from "@/components/ui/native-select"
 import { CategorySelect } from "@/components/expenses/CategorySelect"
 import {
@@ -162,12 +163,12 @@ export function ExpenseForm({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <Label htmlFor="date">Date</Label>
-          <Input
-            id="date"
-            type="date"
+          <DatePicker
             value={date}
-            onChange={(e) => setDate(e.target.value)}
-            required
+            onChange={setDate}
+            placeholder="Pick date"
+            aria-label="Date"
+            className="w-full h-9"
           />
         </div>
         <CategorySelect value={category} onChange={setCategory} />

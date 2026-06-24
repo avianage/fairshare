@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { X, Search } from "lucide-react"
 import { EXPENSE_CATEGORIES } from "@/lib/categories"
 import { Input } from "@/components/ui/input"
+import { DatePicker } from "@/components/ui/date-picker"
 import { cn } from "@/lib/utils"
 
 export type ExpenseFilterState = {
@@ -78,22 +79,22 @@ export function ExpenseFilters({
           />
         </div>
         <div className="flex w-full items-center gap-2 sm:w-auto">
-          <Input
-            type="date"
+          <DatePicker
             value={value.from}
             max={value.to || undefined}
-            onChange={(e) => onChange({ ...value, from: e.target.value })}
-            className="w-full flex-1 min-w-0 bg-background/50 focus:bg-background transition-colors duration-200 text-xs sm:text-sm sm:w-36"
+            onChange={(v) => onChange({ ...value, from: v })}
+            placeholder="From date"
             aria-label="From date"
+            className="w-full flex-1 min-w-0 sm:w-36 h-9"
           />
           <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground shrink-0 px-0.5">to</span>
-          <Input
-            type="date"
+          <DatePicker
             value={value.to}
             min={value.from || undefined}
-            onChange={(e) => onChange({ ...value, to: e.target.value })}
-            className="w-full flex-1 min-w-0 bg-background/50 focus:bg-background transition-colors duration-200 text-xs sm:text-sm sm:w-36"
+            onChange={(v) => onChange({ ...value, to: v })}
+            placeholder="To date"
             aria-label="To date"
+            className="w-full flex-1 min-w-0 sm:w-36 h-9"
           />
         </div>
         {active && (
