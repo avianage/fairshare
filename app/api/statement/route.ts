@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { directExpenseVisibilityWhere } from "@/lib/directExpenses"
+import * as XLSX from "xlsx"
 
 export type StatementItem = {
   type: "expense" | "settlement"
@@ -167,7 +168,51 @@ export async function GET(req: NextRequest) {
   ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
 
   const total = items.length
-  const paginated = items.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
 
+  if (searchParams.get("format") === "xlsx") {
+    const rows = items.map((i) => ({
+      Date: new Date(i.date).toLocaleDateString("en-IN"),
+      Type: i.type,
+      Description: i.description,
+      Group: i.groupName ?? "Direct",
+      "Amount (₹)": i.amount,
+      Involved: [...new Set(i.involvedUsers.map((u) => u.name))].join(", "),
+    }))
+    const ws = XLSX.utils.json_to_sheet(rows)
+    const wb = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(wb, ws, "Statement")
+    const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" })
+    return new Response(buf, {
+      headers: {
+        "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "Content-Disposition": 'attachment; filename="fairshare-statement.xlsx"',
+      },
+    })
+  }
+
+  if (searchParams.get("format") === "csv") {
+    const escape = (v: string) => `"${v.replace(/"/g, '""')}"`
+    const rows = [
+      ["Date", "Type", "Description", "Group", "Amount (₹)", "Involved"].join(","),
+      ...items.map((i) =>
+        [
+          escape(new Date(i.date).toLocaleDateString("en-IN")),
+          escape(i.type),
+          escape(i.description),
+          escape(i.groupName ?? "Direct"),
+          i.amount.toFixed(2),
+          escape([...new Set(i.involvedUsers.map((u) => u.name))].join("; ")),
+        ].join(",")
+      ),
+    ].join("\r\n")
+    return new Response(rows, {
+      headers: {
+        "Content-Type": "text/csv",
+        "Content-Disposition": 'attachment; filename="fairshare-statement.csv"',
+      },
+    })
+  }
+
+  const paginated = items.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
   return NextResponse.json({ items: paginated, total, page, pageSize: PAGE_SIZE })
 }
