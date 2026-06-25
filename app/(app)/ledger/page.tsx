@@ -6,8 +6,8 @@ import {
   type BilateralEntry,
 } from "@/lib/globalBalances"
 import { formatINR } from "@/lib/format"
-import { ChevronDown } from "lucide-react"
 import { Confetti } from "@/components/balances/Confetti"
+import { LedgerViewToggle } from "@/components/balances/LedgerViewToggle"
 import { cn } from "@/lib/utils"
 import Link from "next/link"
 
@@ -88,14 +88,20 @@ function BilateralColumn({
   )
 }
 
-export default async function LedgerPage() {
+export default async function LedgerPage({
+  searchParams,
+}: {
+  searchParams: { view?: string }
+}) {
   const session = await auth()
   if (!session?.user?.id) redirect("/login")
   const userId = session.user.id
 
+  const isGlobal = searchParams.view !== "group"
+
   const [{ owedToYou, youOwe, netBalance }, simplified] = await Promise.all([
     getGlobalDebtsWithContext(userId),
-    getSimplifiedGlobalPayments(userId),
+    isGlobal ? getSimplifiedGlobalPayments(userId) : Promise.resolve([]),
   ])
   const settled = Math.abs(netBalance) < 0.01
 
@@ -107,6 +113,9 @@ export default async function LedgerPage() {
           Your net balances across every group and direct expense.
         </p>
       </div>
+
+      {/* View toggle */}
+      <LedgerViewToggle />
 
       {/* Hero summary */}
       <div className="relative overflow-hidden rounded-2xl border bg-card p-8 text-center shadow-sm">
@@ -122,8 +131,8 @@ export default async function LedgerPage() {
         </p>
       </div>
 
-      {/* Simplified payments — top */}
-      {!settled && simplified.length > 0 && (
+      {/* Simplified payments — global mode only */}
+      {isGlobal && !settled && simplified.length > 0 && (
         <section className="space-y-3">
           <div>
             <h2 className="text-sm font-medium text-muted-foreground">Simplified payments</h2>
@@ -169,26 +178,11 @@ export default async function LedgerPage() {
         </section>
       )}
 
-      {/* Bilateral breakdown — collapsible */}
-      {!settled && (
-        <details className="group">
-          <summary className="flex cursor-pointer list-none items-center justify-between rounded-xl border bg-card px-4 py-3 hover:bg-accent/40 transition-colors">
-            <span className="text-sm font-medium">Individual balances</span>
-            <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform group-open:rotate-180" />
-          </summary>
-          <div className="mt-4 grid gap-6 md:grid-cols-2">
-            <BilateralColumn title="They owe you" entries={owedToYou} tone="owed" />
-            <BilateralColumn title="You owe" entries={youOwe} tone="owe" />
-          </div>
-        </details>
-      )}
-
-      {settled && (
-        <div className="grid gap-6 md:grid-cols-2">
-          <BilateralColumn title="They owe you" entries={owedToYou} tone="owed" />
-          <BilateralColumn title="You owe" entries={youOwe} tone="owe" />
-        </div>
-      )}
+      {/* Bilateral breakdown */}
+      <div className="grid gap-6 md:grid-cols-2">
+        <BilateralColumn title="They owe you" entries={owedToYou} tone="owed" />
+        <BilateralColumn title="You owe" entries={youOwe} tone="owe" />
+      </div>
     </div>
   )
 }

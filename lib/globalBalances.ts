@@ -1,6 +1,5 @@
 import { prisma } from "@/lib/prisma"
 import { directExpenseVisibilityWhere } from "@/lib/directExpenses"
-import { buildRawDebts, simplifyDebts, type RawDebt } from "@/lib/splitEngine"
 
 export type ContextualDebt = {
   groupId: string | null
@@ -524,96 +523,98 @@ export type SimplifiedPayment = {
 }
 
 /**
- * Runs the same greedy min-transfer simplification used by group ledgers,
- * but across ALL of the user's groups + direct expenses combined.
- * Needs the full multi-party debt graph (all members, not just the user)
- * so that cross-person rerouting works correctly.
+ * Routing-based simplified payments for the user's ledger.
+ *
+ * Starts from bilateral balances (who owes the user / who the user owes) and
+ * tries to route each debtor's payment directly to a creditor — but ONLY when
+ * the debtor and creditor are mutual friends. This satisfies the "all three know
+ * each other" rule with correct amounts in every case:
+ *
+ *  - All friends (D-C friends): D pays C directly, reducing the user's share to C.
+ *  - Not friends (D-C not friends): D pays the user bilaterally; user pays C in full.
  */
 export async function getSimplifiedGlobalPayments(
   userId: string
 ): Promise<SimplifiedPayment[]> {
-  const memberships = await prisma.groupMember.findMany({
-    where: { userId },
-    select: { groupId: true },
-  })
-  const groupIds = memberships.map((m) => m.groupId)
+  const { owedToYou, youOwe } = await getGlobalDebts(userId)
+  if (owedToYou.length === 0 && youOwe.length === 0) return []
 
-  const [groupExpenses, directExpenses, groupSettlements, directSettlements] =
-    await Promise.all([
-      groupIds.length
-        ? prisma.expense.findMany({
-            where: { groupId: { in: groupIds }, deletedAt: null },
-            select: {
-              payerId: true,
-              splits: { select: { userId: true, amount: true } },
-            },
-          })
-        : Promise.resolve([]),
-      prisma.expense.findMany({
-        where: directExpenseVisibilityWhere(userId),
-        select: {
-          payerId: true,
-          splits: { select: { userId: true, amount: true } },
-        },
-      }),
-      groupIds.length
-        ? prisma.settlement.findMany({
-            where: { groupId: { in: groupIds } },
-            select: { senderId: true, receiverId: true, amount: true },
-          })
-        : Promise.resolve([]),
-      prisma.settlement.findMany({
-        where: {
-          groupId: null,
-          OR: [{ senderId: userId }, { receiverId: userId }],
-        },
-        select: { senderId: true, receiverId: true, amount: true },
-      }),
-    ])
+  const debtorIds = owedToYou.map((d) => d.userId)
+  const creditorIds = youOwe.map((d) => d.userId)
+  const allIds = [...new Set([...debtorIds, ...creditorIds, userId])]
 
-  const rawDebts = buildRawDebts(
-    [...groupExpenses, ...directExpenses].map((e) => ({
-      payerId: e.payerId,
-      splits: e.splits.map((s) => ({ userId: s.userId, amount: Number(s.amount) })),
-    }))
+  // Both rows (A,B) and (B,A) exist for a mutual friendship — one-direction lookup suffices.
+  const [friendships, creditorUsers] = await Promise.all([
+    prisma.friendship.findMany({
+      where: { userId: { in: allIds }, friendId: { in: allIds } },
+      select: { userId: true, friendId: true },
+    }),
+    creditorIds.length
+      ? prisma.user.findMany({
+          where: { id: { in: creditorIds } },
+          select: { id: true, allowPaymentRouting: true },
+        })
+      : Promise.resolve([]),
+  ])
+  const friendSet = new Set(friendships.map((f) => `${f.userId}:${f.friendId}`))
+  const areFriends = (a: string, b: string) => friendSet.has(`${a}:${b}`)
+  const routingAllowed = new Set(
+    creditorUsers.filter((u) => u.allowPaymentRouting).map((u) => u.id)
   )
 
-  // Settlement reduces sender's debt: reverse it as a raw debt.
-  const settlementDebts: RawDebt[] = [
-    ...groupSettlements,
-    ...directSettlements,
-  ].map((s) => ({
-    fromUserId: s.receiverId,
-    toUserId: s.senderId,
-    amount: Number(s.amount),
-  }))
+  // Mutable balance copies
+  const creditorBalances = new Map(youOwe.map((c) => [c.userId, c.amount]))
+  const debtorBalances = new Map(owedToYou.map((d) => [d.userId, d.amount]))
 
-  const simplified = simplifyDebts([...rawDebts, ...settlementDebts])
+  const output: { fromId: string; toId: string; amount: number }[] = []
 
-  // Only keep transfers that involve the user or where both parties share
-  // expenses with the user (they appeared in the graph because of the user).
-  const relevant = simplified.filter(
-    (d) => d.fromUserId === userId || d.toUserId === userId
-  )
+  // Sort descending so largest debts get routed first
+  const sortedDebtors = [...debtorBalances.entries()].sort((a, b) => b[1] - a[1])
+  const sortedCreditors = [...creditorBalances.entries()].sort((a, b) => b[1] - a[1])
 
-  if (relevant.length === 0) return []
+  for (const [debtorId, debtorAmt] of sortedDebtors) {
+    let remaining = debtorAmt
+    for (const [creditorId] of sortedCreditors) {
+      if (remaining < 0.01) break
+      const available = creditorBalances.get(creditorId) ?? 0
+      if (available < 0.01) continue
+      if (!areFriends(debtorId, creditorId)) continue
+      if (!routingAllowed.has(creditorId)) continue
 
-  const allIds = [
-    ...new Set(relevant.flatMap((d) => [d.fromUserId, d.toUserId])),
-  ]
+      const routeAmt = Math.min(remaining, available)
+      output.push({ fromId: debtorId, toId: creditorId, amount: routeAmt })
+      remaining -= routeAmt
+      creditorBalances.set(creditorId, available - routeAmt)
+    }
+    if (remaining > 0.01) {
+      output.push({ fromId: debtorId, toId: userId, amount: remaining })
+    }
+  }
+
+  // Remaining creditor balances not offset by routing — user pays directly
+  for (const [creditorId, amt] of creditorBalances) {
+    if (amt > 0.01) output.push({ fromId: userId, toId: creditorId, amount: amt })
+  }
+
+  // Only show transfers the current user is directly part of.
+  // Routed transfers (e.g. Vandan→Tarang) belong on their own ledgers, not here.
+  const userOutput = output.filter((o) => o.fromId === userId || o.toId === userId)
+  if (userOutput.length === 0) return []
+
+  const allOutputIds = [...new Set(userOutput.flatMap((o) => [o.fromId, o.toId]))]
   const users = await prisma.user.findMany({
-    where: { id: { in: allIds } },
+    where: { id: { in: allOutputIds } },
     select: { id: true, name: true, avatar: true },
   })
   const userMap = new Map(users.map((u) => [u.id, u]))
 
-  return relevant.map((d) => ({
-    fromUserId: d.fromUserId,
-    fromName: userMap.get(d.fromUserId)?.name ?? "Unknown",
-    fromAvatar: userMap.get(d.fromUserId)?.avatar ?? null,
-    toUserId: d.toUserId,
-    toName: userMap.get(d.toUserId)?.name ?? "Unknown",
-    toAvatar: userMap.get(d.toUserId)?.avatar ?? null,
-    amount: d.amount,
+  return userOutput.map((o) => ({
+    fromUserId: o.fromId,
+    fromName: userMap.get(o.fromId)?.name ?? "Unknown",
+    fromAvatar: userMap.get(o.fromId)?.avatar ?? null,
+    toUserId: o.toId,
+    toName: userMap.get(o.toId)?.name ?? "Unknown",
+    toAvatar: userMap.get(o.toId)?.avatar ?? null,
+    amount: Math.round(o.amount * 100) / 100,
   }))
 }

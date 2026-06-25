@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { ProfileForm } from "@/components/profile/ProfileForm"
 import { PasswordForm } from "@/components/profile/PasswordForm"
+import { PaymentRoutingForm } from "@/components/profile/PaymentRoutingForm"
 
 export const metadata = { title: "Account & Security · Fairshare" }
 
@@ -14,7 +15,7 @@ export default async function ProfileSettingsPage() {
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { id: true, name: true, username: true, email: true, createdAt: true, usernameChangedAt: true },
+    select: { id: true, name: true, username: true, email: true, createdAt: true, usernameChangedAt: true, allowPaymentRouting: true },
   })
 
   if (!user) redirect("/login")
@@ -50,6 +51,8 @@ export default async function ProfileSettingsPage() {
       />
 
       <PasswordForm />
+
+      <PaymentRoutingForm initialValue={user.allowPaymentRouting} />
     </div>
   )
 }

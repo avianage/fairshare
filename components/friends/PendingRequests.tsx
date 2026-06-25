@@ -39,6 +39,7 @@ export function PendingRequests({
       if (!res.ok) { toast.error("Could not accept request."); return }
       setIncoming((prev) => prev.filter((r) => r.id !== req.id))
       toast.success(`You and ${req.sender!.name} are now friends!`)
+      window.dispatchEvent(new CustomEvent("fairshare:friendship-changed"))
       onAccepted?.(req.sender!.id, req.sender!.name)
     } catch {
       toast.error("Something went wrong.")

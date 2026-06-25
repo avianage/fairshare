@@ -99,6 +99,7 @@ export function FriendsList({
     if (!res.ok) { toast.error("Could not remove friend"); return }
     setFriends((prev) => prev.filter((f) => f.id !== id))
     toast.success(`Removed ${name}`)
+    window.dispatchEvent(new CustomEvent("fairshare:friendship-changed"))
   }
 
   async function addFriendToGroup(friend: Friend, group: AdminGroup) {

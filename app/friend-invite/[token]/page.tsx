@@ -44,6 +44,7 @@ export default function FriendInvitePage({ params }: { params: { token: string }
     if (res.status === 409 && d?.error === "self") { setResult("self"); return }
     if (d?.alreadyFriends) { setResult("alreadyFriends"); return }
     setResult("added")
+    window.dispatchEvent(new CustomEvent("fairshare:friendship-changed"))
   }, [token, router, loginUrl])
 
   // Auto-accept once valid + authenticated

@@ -6,13 +6,14 @@ import { prisma } from "@/lib/prisma"
 export const runtime = "nodejs"
 
 const updateProfileSchema = z.object({
-  name: z.string().trim().min(2, "Name must be at least 2 characters").max(80),
+  name: z.string().trim().min(2, "Name must be at least 2 characters").max(80).optional(),
   username: z
     .string()
     .min(3, "Username must be at least 3 characters")
     .max(20, "Username must be at most 20 characters")
     .regex(/^[a-zA-Z0-9_]+$/, "Only letters, numbers, and underscores")
     .optional(),
+  allowPaymentRouting: z.boolean().optional(),
 })
 
 const USERNAME_COOLDOWN_DAYS = 30
@@ -38,9 +39,11 @@ export async function PATCH(request: NextRequest) {
     )
   }
 
-  const { name } = parsed.data
+  const { name, allowPaymentRouting } = parsed.data
   const username = parsed.data.username?.toLowerCase()
-  const updateData: Record<string, unknown> = { name }
+  const updateData: Record<string, unknown> = {}
+  if (name !== undefined) updateData.name = name
+  if (allowPaymentRouting !== undefined) updateData.allowPaymentRouting = allowPaymentRouting
 
   if (username !== undefined) {
     const current = await prisma.user.findUnique({
@@ -77,7 +80,7 @@ export async function PATCH(request: NextRequest) {
   const user = await prisma.user.update({
     where: { id: session.user.id },
     data: updateData,
-    select: { id: true, name: true, username: true, email: true },
+    select: { id: true, name: true, username: true, email: true, allowPaymentRouting: true },
   })
 
   return NextResponse.json(user)

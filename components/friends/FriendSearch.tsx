@@ -60,6 +60,7 @@ export function FriendSearch({ onRequestSent }: { onRequestSent?: () => void }) 
       }
       if (data.accepted) {
         toast.success(`You and ${user.name} are now friends!`)
+        window.dispatchEvent(new CustomEvent("fairshare:friendship-changed"))
       } else {
         toast.success(`Friend request sent to ${user.name}.`)
       }
