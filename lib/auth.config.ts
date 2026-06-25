@@ -18,6 +18,8 @@ export const authConfig: NextAuthConfig = {
       if (user) {
         token.id = user.id
         token.isAdmin = (user as { isAdmin?: boolean }).isAdmin ?? false
+        token.isOwner = (user as { isOwner?: boolean }).isOwner ?? false
+        token.isBanned = (user as { isBanned?: boolean }).isBanned ?? false
       }
       return token
     },
@@ -25,6 +27,8 @@ export const authConfig: NextAuthConfig = {
       if (session.user && token.id) {
         session.user.id = token.id as string
         session.user.isAdmin = token.isAdmin === true
+        session.user.isOwner = token.isOwner === true
+        session.user.isBanned = token.isBanned === true
       }
       return session
     },

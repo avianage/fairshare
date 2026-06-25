@@ -46,6 +46,7 @@ model User {
   passwordHash        String
   avatar              String?
   isAdmin             Boolean   @default(false)
+  isOwner             Boolean   @default(false)
   isBanned            Boolean   @default(false)
   totalMonthlyBudget    Decimal?    @db.Decimal(12, 2)
   budgetModel           BudgetModel @default(NET_PAYMENT)

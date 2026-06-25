@@ -193,7 +193,11 @@ export function GroupSettings({
     if (friendsLoaded) return
     try {
       const res = await fetch("/api/friends")
-      const data = res.ok ? await res.json() : null
+      if (!res.ok) {
+        toast.error("Could not load friends.")
+        return
+      }
+      const data = await res.json()
       setFriends(data?.friends ?? [])
     } catch {
       toast.error("Could not load friends.")

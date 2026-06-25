@@ -91,6 +91,16 @@ export default auth((req: NextRequest & { auth: unknown }) => {
     return NextResponse.redirect(loginUrl)
   }
 
+  // Banned users are blocked from all protected routes
+  const token = session as { isBanned?: boolean } | null
+  if (token?.isBanned && needsAuth(pathname, method)) {
+    if (pathname.startsWith("/api/")) {
+      logHttp({ method, path: pathname, status: 403, msg: "banned" })
+      return NextResponse.json({ error: "Your account has been suspended." }, { status: 403 })
+    }
+    return NextResponse.redirect(new URL("/login?error=banned", nextUrl.origin))
+  }
+
   return NextResponse.next()
 })
 

@@ -197,13 +197,8 @@ export function calculateSplits(input: SplitInput): SplitResult {
   if (type === "EQUAL") return calculateEqualSplit(totalAmount, memberIds)
 
   if (type === "EXACT") {
-    const sum = memberIds.reduce((a, id) => a + (values[id] ?? 0), 0)
-    if (Math.abs(sum - totalAmount) > 0.01) {
-      throw new Error("EXACT splits must sum to total amount")
-    }
-    return Object.fromEntries(
-      memberIds.map((id) => [id, Math.round((values[id] ?? 0) * 100) / 100])
-    )
+    const amounts = Object.fromEntries(memberIds.map((id) => [id, values[id] ?? 0]))
+    return calculateExactSplit(totalAmount, amounts)
   }
 
   if (type === "PERCENTAGE") {

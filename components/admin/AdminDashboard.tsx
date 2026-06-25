@@ -23,6 +23,7 @@ import {
   X,
   Pencil,
   Users,
+  Crown,
 } from "lucide-react"
 
 type GroupMembership = {
@@ -36,6 +37,7 @@ type AdminUser = {
   username: string | null
   email: string
   isAdmin: boolean
+  isOwner: boolean
   isBanned: boolean
   createdAt: string
   memberships: GroupMembership[]
@@ -192,7 +194,7 @@ function GroupsPanel({ user, onClose }: { user: AdminUser; onClose: () => void }
   )
 }
 
-export function AdminDashboard({ currentUserId }: { currentUserId: string }) {
+export function AdminDashboard({ currentUserId, currentUserIsOwner }: { currentUserId: string; currentUserIsOwner: boolean }) {
   const [users, setUsers] = useState<AdminUser[]>([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -222,6 +224,19 @@ export function AdminDashboard({ currentUserId }: { currentUserId: string }) {
   useEffect(() => {
     fetchUsers()
   }, [fetchUsers])
+
+  const ACTION_CONFIRMS: Record<string, string> = {
+    ban: "Ban this user? They will lose access to all protected pages.",
+    unban: "Unban this user? They will regain full access.",
+    makeAdmin: "Promote this user to admin? They will have full administrative access.",
+    removeAdmin: "Remove admin access from this user?",
+  }
+
+  function confirmThenAction(userId: string, action: string, name: string) {
+    const msg = ACTION_CONFIRMS[action]
+    if (msg && !confirm(`${name}: ${msg}`)) return
+    performAction(userId, action)
+  }
 
   async function performAction(userId: string, action: string) {
     setActionLoading(`${userId}:${action}`)
@@ -317,7 +332,12 @@ export function AdminDashboard({ currentUserId }: { currentUserId: string }) {
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex flex-wrap gap-1">
-                              {user.isAdmin && (
+                              {user.isOwner && (
+                                <span className="inline-flex items-center gap-1 rounded-full bg-yellow-500/10 px-2 py-0.5 text-xs font-semibold text-yellow-600 dark:text-yellow-400 border border-yellow-500/20 shadow-sm">
+                                  <Crown className="h-3 w-3" /> Owner
+                                </span>
+                              )}
+                              {user.isAdmin && !user.isOwner && (
                                 <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-semibold text-primary border border-primary/20 shadow-sm">
                                   <ShieldCheck className="h-3 w-3" /> Admin
                                 </span>
@@ -327,7 +347,7 @@ export function AdminDashboard({ currentUserId }: { currentUserId: string }) {
                                   <Ban className="h-3 w-3" /> Banned
                                 </span>
                               )}
-                              {!user.isAdmin && !user.isBanned && (
+                              {!user.isAdmin && !user.isOwner && !user.isBanned && (
                                 <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-xs font-semibold text-success border border-success/20 shadow-sm">
                                   Active
                                 </span>
@@ -344,24 +364,32 @@ export function AdminDashboard({ currentUserId }: { currentUserId: string }) {
                               >
                                 <Pencil className="h-3 w-3" /> Edit
                               </Button>
-                              {!isSelf && (
+                              {!isSelf && !user.isOwner && (
                                 <>
                                   {user.isBanned ? (
-                                    <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" disabled={!!actionLoading} onClick={() => performAction(user.id, "unban")}>
+                                    <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" disabled={!!actionLoading} onClick={() => confirmThenAction(user.id, "unban", user.name)}>
                                       <UserCheck className="h-3 w-3" /> Unban
                                     </Button>
                                   ) : (
-                                    <Button size="sm" variant="outline" className="h-7 gap-1 text-xs text-destructive hover:text-destructive" disabled={!!actionLoading} onClick={() => performAction(user.id, "ban")}>
+                                    <Button size="sm" variant="outline" className="h-7 gap-1 text-xs text-destructive hover:text-destructive" disabled={!!actionLoading} onClick={() => confirmThenAction(user.id, "ban", user.name)}>
                                       <Ban className="h-3 w-3" /> Ban
                                     </Button>
                                   )}
-                                  {user.isAdmin ? (
-                                    <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" disabled={!!actionLoading} onClick={() => performAction(user.id, "removeAdmin")}>
-                                      <ShieldOff className="h-3 w-3" /> Demote
-                                    </Button>
-                                  ) : (
-                                    <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" disabled={!!actionLoading} onClick={() => performAction(user.id, "makeAdmin")}>
-                                      <ShieldCheck className="h-3 w-3" /> Promote
+                                  {currentUserIsOwner && (
+                                    user.isAdmin ? (
+                                      <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" disabled={!!actionLoading} onClick={() => confirmThenAction(user.id, "removeAdmin", user.name)}>
+                                        <ShieldOff className="h-3 w-3" /> Demote
+                                      </Button>
+                                    ) : (
+                                      <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" disabled={!!actionLoading} onClick={() => confirmThenAction(user.id, "makeAdmin", user.name)}>
+                                        <ShieldCheck className="h-3 w-3" /> Promote
+                                      </Button>
+                                    )
+                                  )}
+                                  {currentUserIsOwner && (
+                                    <Button size="sm" variant="outline" className="h-7 gap-1 text-xs text-yellow-600 dark:text-yellow-400 hover:text-yellow-600" disabled={!!actionLoading}
+                                      onClick={() => { if (confirm(`Transfer ownership to ${user.name}? You will lose owner privileges.`)) performAction(user.id, "transferOwnership") }}>
+                                      <Crown className="h-3 w-3" />
                                     </Button>
                                   )}
                                   <Button
@@ -378,6 +406,9 @@ export function AdminDashboard({ currentUserId }: { currentUserId: string }) {
                                     <Trash2 className="h-3 w-3" />
                                   </Button>
                                 </>
+                              )}
+                              {!isSelf && user.isOwner && (
+                                <span className="text-xs text-muted-foreground italic px-2 py-1">Protected</span>
                               )}
                             </div>
                           </td>
@@ -403,7 +434,12 @@ export function AdminDashboard({ currentUserId }: { currentUserId: string }) {
                           )}
                         </div>
                         <div className="flex flex-wrap gap-1 shrink-0">
-                          {user.isAdmin && (
+                          {user.isOwner && (
+                            <span className="inline-flex items-center gap-1 rounded-full bg-yellow-500/10 px-2 py-0.5 text-xs font-medium text-yellow-600 dark:text-yellow-400">
+                              <Crown className="h-3 w-3" /> Owner
+                            </span>
+                          )}
+                          {user.isAdmin && !user.isOwner && (
                             <span className="inline-flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">
                               <ShieldCheck className="h-3 w-3" /> Admin
                             </span>
@@ -425,24 +461,32 @@ export function AdminDashboard({ currentUserId }: { currentUserId: string }) {
                         <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" onClick={() => setEditingUser(user)}>
                           <Pencil className="h-3 w-3" /> Edit
                         </Button>
-                        {!isSelf && (
+                        {!isSelf && !user.isOwner && (
                           <>
                             {user.isBanned ? (
-                              <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" disabled={!!actionLoading} onClick={() => performAction(user.id, "unban")}>
+                              <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" disabled={!!actionLoading} onClick={() => confirmThenAction(user.id, "unban", user.name)}>
                                 <UserCheck className="h-3 w-3" /> Unban
                               </Button>
                             ) : (
-                              <Button size="sm" variant="outline" className="h-7 gap-1 text-xs text-destructive" disabled={!!actionLoading} onClick={() => performAction(user.id, "ban")}>
+                              <Button size="sm" variant="outline" className="h-7 gap-1 text-xs text-destructive" disabled={!!actionLoading} onClick={() => confirmThenAction(user.id, "ban", user.name)}>
                                 <Ban className="h-3 w-3" /> Ban
                               </Button>
                             )}
-                            {user.isAdmin ? (
-                              <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" disabled={!!actionLoading} onClick={() => performAction(user.id, "removeAdmin")}>
-                                <ShieldOff className="h-3 w-3" /> Demote
-                              </Button>
-                            ) : (
-                              <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" disabled={!!actionLoading} onClick={() => performAction(user.id, "makeAdmin")}>
-                                <ShieldCheck className="h-3 w-3" /> Promote
+                            {currentUserIsOwner && (
+                              user.isAdmin ? (
+                                <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" disabled={!!actionLoading} onClick={() => confirmThenAction(user.id, "removeAdmin", user.name)}>
+                                  <ShieldOff className="h-3 w-3" /> Demote
+                                </Button>
+                              ) : (
+                                <Button size="sm" variant="outline" className="h-7 gap-1 text-xs" disabled={!!actionLoading} onClick={() => confirmThenAction(user.id, "makeAdmin", user.name)}>
+                                  <ShieldCheck className="h-3 w-3" /> Promote
+                                </Button>
+                              )
+                            )}
+                            {currentUserIsOwner && (
+                              <Button size="sm" variant="outline" className="h-7 gap-1 text-xs text-yellow-600 dark:text-yellow-400" disabled={!!actionLoading}
+                                onClick={() => { if (confirm(`Transfer ownership to ${user.name}? You will lose owner privileges.`)) performAction(user.id, "transferOwnership") }}>
+                                <Crown className="h-3 w-3" />
                               </Button>
                             )}
                             <Button
@@ -459,6 +503,9 @@ export function AdminDashboard({ currentUserId }: { currentUserId: string }) {
                               <Trash2 className="h-3 w-3" />
                             </Button>
                           </>
+                        )}
+                        {!isSelf && user.isOwner && (
+                          <span className="text-xs text-muted-foreground italic">Protected</span>
                         )}
                       </div>
                     </div>

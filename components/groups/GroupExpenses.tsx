@@ -8,6 +8,7 @@ import {
   type ExpenseFilterState,
 } from "@/components/groups/ExpenseFilters"
 import { formatMoney } from "@/lib/format"
+import { toast } from "sonner"
 
 function buildQuery(f: ExpenseFilterState) {
   const p = new URLSearchParams({ limit: "50" })
@@ -61,6 +62,8 @@ export function GroupExpenses({
           const data = await res.json()
           setExpenses(data.expenses ?? [])
           setFilteredTotal(data.filteredTotal ?? 0)
+        } else {
+          toast.error("Could not load expenses. Please try again.")
         }
       } finally {
         setLoading(false)

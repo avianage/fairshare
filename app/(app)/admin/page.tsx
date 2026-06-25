@@ -28,7 +28,7 @@ export default async function AdminPage() {
           </p>
         </div>
       </div>
-      <AdminDashboard currentUserId={session.user.id} />
+      <AdminDashboard currentUserId={session.user.id} currentUserIsOwner={session.user.isOwner === true} />
     </div>
   )
 }

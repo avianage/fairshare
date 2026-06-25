@@ -79,18 +79,14 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const isSiteAdmin = session.user.isAdmin === true
-
   let membership
-  if (!isSiteAdmin) {
-    try {
-      membership = await requireGroupMember(params.groupId, session.user.id)
-    } catch (e) {
-      if (e instanceof ForbiddenError) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 })
-      }
-      throw e
+  try {
+    membership = await requireGroupMember(params.groupId, session.user.id)
+  } catch (e) {
+    if (e instanceof ForbiddenError) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
+    throw e
   }
 
   let body: unknown
@@ -113,10 +109,10 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Not found" }, { status: 404 })
   }
 
-  // Authorization: payer, group admin, or site admin may edit.
+  // Authorization: payer or group admin may edit.
   const isPayer = expense.payerId === session.user.id
   const isGroupAdmin = membership?.role === "ADMIN"
-  if (!isPayer && !isGroupAdmin && !isSiteAdmin) {
+  if (!isPayer && !isGroupAdmin) {
     return NextResponse.json(
       { error: "Only the payer or a group admin can edit this expense" },
       { status: 403 }
@@ -171,18 +167,14 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const isSiteAdmin = session.user.isAdmin === true
-
   let membership
-  if (!isSiteAdmin) {
-    try {
-      membership = await requireGroupMember(params.groupId, session.user.id)
-    } catch (e) {
-      if (e instanceof ForbiddenError) {
-        return NextResponse.json({ error: "Forbidden" }, { status: 403 })
-      }
-      throw e
+  try {
+    membership = await requireGroupMember(params.groupId, session.user.id)
+  } catch (e) {
+    if (e instanceof ForbiddenError) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
+    throw e
   }
 
   const expense = await prisma.expense.findFirst({
@@ -195,7 +187,7 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
 
   const isPayer = expense.payerId === session.user.id
   const isGroupAdmin = membership?.role === "ADMIN"
-  if (!isPayer && !isGroupAdmin && !isSiteAdmin) {
+  if (!isPayer && !isGroupAdmin) {
     return NextResponse.json(
       { error: "Only the payer or a group admin can delete this expense" },
       { status: 403 }

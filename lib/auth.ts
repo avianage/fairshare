@@ -37,6 +37,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
             email: true,
             passwordHash: true,
             isAdmin: true,
+            isOwner: true,
             isBanned: true,
           },
         })
@@ -52,6 +53,8 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
           name: user.name,
           email: user.email,
           isAdmin: user.isAdmin,
+          isOwner: user.isOwner,
+          isBanned: user.isBanned,
         }
       },
     }),

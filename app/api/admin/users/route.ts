@@ -40,6 +40,7 @@ export async function GET(request: NextRequest) {
         username: true,
         email: true,
         isAdmin: true,
+        isOwner: true,
         isBanned: true,
         createdAt: true,
         memberships: {
@@ -66,6 +67,7 @@ const patchSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("makeAdmin"), userId: z.string() }),
   z.object({ action: z.literal("removeAdmin"), userId: z.string() }),
   z.object({ action: z.literal("delete"), userId: z.string() }),
+  z.object({ action: z.literal("transferOwnership"), userId: z.string() }),
   z.object({
     action: z.literal("updateProfile"),
     userId: z.string(),
@@ -98,21 +100,71 @@ export async function PATCH(request: NextRequest) {
   }
 
   const { action, userId } = parsed.data
+  const actorIsOwner = session.user.isOwner === true
 
-  if (userId === session.user.id && ["ban", "removeAdmin", "delete"].includes(action)) {
+  // Self-protection
+  if (userId === session.user.id && ["ban", "removeAdmin", "delete", "transferOwnership"].includes(action)) {
     return NextResponse.json({ error: "Cannot perform this action on yourself" }, { status: 400 })
   }
 
-  if (action === "delete") {
-    // Clear all FK references before deleting
+  // Fetch the target user to enforce hierarchy rules
+  const target = await prisma.user.findUnique({
+    where: { id: userId },
+    select: { isAdmin: true, isOwner: true },
+  })
+  if (!target) return NextResponse.json({ error: "User not found" }, { status: 404 })
+
+  // Owner is untouchable by site admins
+  if (target.isOwner && !actorIsOwner) {
+    return NextResponse.json({ error: "The owner cannot be modified." }, { status: 403 })
+  }
+
+  // Site admins cannot act on other admins (only owner can)
+  if (!actorIsOwner && target.isAdmin && ["ban", "delete", "removeAdmin"].includes(action)) {
+    return NextResponse.json({ error: "Site admins cannot act on other admins." }, { status: 403 })
+  }
+
+  // makeAdmin and removeAdmin are owner-only
+  if (["makeAdmin", "removeAdmin", "transferOwnership"].includes(action) && !actorIsOwner) {
+    return NextResponse.json({ error: "Only the owner can promote or demote admins." }, { status: 403 })
+  }
+
+  if (action === "transferOwnership") {
     await prisma.$transaction([
-      prisma.expenseSplit.deleteMany({ where: { userId } }),
-      prisma.settlement.deleteMany({ where: { OR: [{ senderId: userId }, { receiverId: userId }] } }),
-      prisma.directParticipant.deleteMany({ where: { userId } }),
-      prisma.expense.deleteMany({ where: { payerId: userId } }),
-      prisma.groupMember.deleteMany({ where: { userId } }),
-      prisma.user.delete({ where: { id: userId } }),
+      prisma.user.updateMany({ where: { isOwner: true }, data: { isOwner: false } }),
+      prisma.user.update({ where: { id: userId }, data: { isOwner: true, isAdmin: true } }),
     ])
+    return NextResponse.json({ success: true })
+  }
+
+  if (action === "delete") {
+    await prisma.$transaction(async (tx) => {
+      // Soft-delete expenses paid by this user so balance history is preserved
+      await tx.expense.updateMany({
+        where: { payerId: userId, deletedAt: null },
+        data: { deletedAt: new Date() },
+      })
+      // Reassign or soft-delete groups owned by this user
+      const ownedGroups = await tx.group.findMany({
+        where: { ownerId: userId, deletedAt: null },
+        select: {
+          id: true,
+          members: { where: { userId: { not: userId }, role: "ADMIN" }, select: { userId: true }, take: 1 },
+        },
+      })
+      for (const g of ownedGroups) {
+        if (g.members.length > 0) {
+          await tx.group.update({ where: { id: g.id }, data: { ownerId: g.members[0].userId } })
+        } else {
+          await tx.group.update({ where: { id: g.id }, data: { deletedAt: new Date() } })
+        }
+      }
+      // Remove remaining FK references then delete the user
+      await tx.settlement.deleteMany({ where: { OR: [{ senderId: userId }, { receiverId: userId }] } })
+      await tx.directParticipant.deleteMany({ where: { userId } })
+      await tx.groupMember.deleteMany({ where: { userId } })
+      await tx.user.delete({ where: { id: userId } })
+    })
     return NextResponse.json({ success: true })
   }
 
@@ -137,7 +189,7 @@ export async function PATCH(request: NextRequest) {
     const user = await prisma.user.update({
       where: { id: userId },
       data: updateData,
-      select: { id: true, name: true, username: true, email: true, isAdmin: true, isBanned: true },
+      select: { id: true, name: true, username: true, email: true, isAdmin: true, isOwner: true, isBanned: true },
     })
     return NextResponse.json(user)
   }
@@ -152,7 +204,7 @@ export async function PATCH(request: NextRequest) {
   const user = await prisma.user.update({
     where: { id: userId },
     data: flagMap[action],
-    select: { id: true, isBanned: true, isAdmin: true },
+    select: { id: true, isBanned: true, isAdmin: true, isOwner: true },
   })
 
   return NextResponse.json(user)

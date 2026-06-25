@@ -10,6 +10,7 @@ import { DatePicker } from "@/components/ui/date-picker"
 import { NativeSelect } from "@/components/ui/native-select"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
+import { toast } from "sonner"
 import type { StatementItem } from "@/app/api/statement/route"
 
 type Group = { id: string; name: string; deleted?: boolean }
@@ -107,6 +108,8 @@ export function StatementTable({ groups }: { groups: Group[] }) {
       a.download = filename
       a.click()
       URL.revokeObjectURL(url)
+    } else {
+      toast.error("Export failed. Please try again.")
     }
     setter(false)
   }
