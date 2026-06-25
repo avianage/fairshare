@@ -23,7 +23,7 @@ const baseLinks = [
 const mobileLinks = [
   { href: "/dashboard", label: "Home", icon: LayoutDashboard },
   { href: "/groups", label: "Groups", icon: Users },
-  { href: "/ledger", label: "Ledger", icon: Scale },
+  { href: "/statement", label: "Statement", icon: ScrollText },
   { href: "/profile", label: "Profile", icon: User },
 ]
 
