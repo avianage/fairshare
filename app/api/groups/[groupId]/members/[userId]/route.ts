@@ -7,6 +7,7 @@ import {
   requireGroupAdmin,
   requireGroupMember,
 } from "@/lib/auth-helpers"
+import { computeGroupBalances } from "@/lib/balances"
 
 type Params = { params: { groupId: string; userId: string } }
 
@@ -98,6 +99,20 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
   })
   if (!target) {
     return NextResponse.json({ error: "Member not found" }, { status: 404 })
+  }
+
+  // Block removal if the target has an unsettled balance in this group.
+  const { net } = await computeGroupBalances(groupId)
+  const targetBalance = net[targetId] ?? 0
+  if (Math.abs(targetBalance) > 0.01) {
+    return NextResponse.json(
+      {
+        error: isSelf
+          ? "You have unsettled balances in this group. Settle up before leaving."
+          : "This member has unsettled balances and cannot be removed.",
+      },
+      { status: 400 }
+    )
   }
 
   const [totalMembers, adminCount] = await Promise.all([

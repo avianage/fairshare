@@ -4,10 +4,11 @@ import { ChevronDown } from "lucide-react"
 
 export type NativeSelectProps = React.SelectHTMLAttributes<HTMLSelectElement> & {
   placeholder?: string
+  renderOption?: (opt: { value: string; label: string }) => React.ReactNode
 }
 
 const NativeSelect = React.forwardRef<HTMLSelectElement, NativeSelectProps>(
-  ({ className, children, value, onChange, placeholder, ...props }, ref) => {
+  ({ className, children, value, onChange, placeholder, renderOption, ...props }, ref) => {
     const [isOpen, setIsOpen] = React.useState(false)
     const containerRef = React.useRef<HTMLDivElement>(null)
 
@@ -22,12 +23,13 @@ const NativeSelect = React.forwardRef<HTMLSelectElement, NativeSelectProps>(
 
     // Parse options from children
     const options = React.useMemo(() => {
-      const list: { value: string; label: string }[] = []
+      const list: { value: string; label: string; className?: string }[] = []
       React.Children.forEach(children, (child) => {
         if (React.isValidElement(child) && child.type === "option") {
           list.push({
             value: String(child.props.value ?? ""),
             label: getChildrenText(child.props.children),
+            className: child.props.className,
           })
         }
       })
@@ -86,10 +88,11 @@ const NativeSelect = React.forwardRef<HTMLSelectElement, NativeSelectProps>(
                 onClick={() => handleSelect(opt.value)}
                 className={cn(
                   "relative flex w-full cursor-pointer select-none items-center rounded-sm px-2 py-1.5 text-left text-sm outline-none transition-colors hover:bg-accent hover:text-accent-foreground",
-                  opt.value === value && "bg-accent text-accent-foreground font-medium"
+                  opt.value === value && "bg-accent text-accent-foreground font-medium",
+                  opt.className
                 )}
               >
-                {opt.label}
+                {renderOption ? renderOption(opt) : opt.label}
               </button>
             ))}
           </div>

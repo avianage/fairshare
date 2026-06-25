@@ -7,6 +7,7 @@ import {
   requireGroupAdmin,
   requireGroupMember,
 } from "@/lib/auth-helpers"
+import { computeGroupBalances } from "@/lib/balances"
 
 const emojiSchema = z
   .string()
@@ -171,6 +172,14 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 })
     }
     throw e
+  }
+
+  const { simplified } = await computeGroupBalances(params.groupId)
+  if (simplified.length > 0) {
+    return NextResponse.json(
+      { error: "All balances must be settled before deleting the group." },
+      { status: 400 }
+    )
   }
 
   const result = await prisma.group.updateMany({

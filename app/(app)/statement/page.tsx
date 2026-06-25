@@ -11,9 +11,15 @@ export default async function StatementPage() {
 
   const memberships = await prisma.groupMember.findMany({
     where: { userId: session.user.id },
-    select: { group: { select: { id: true, name: true } } },
+    select: { group: { select: { id: true, name: true, deletedAt: true } } },
   })
-  const groups = memberships.map((m) => ({ id: m.group.id, name: m.group.name }))
+  const groups = memberships
+    .map((m) => ({
+      id: m.group.id,
+      name: m.group.name,
+      deleted: !!m.group.deletedAt,
+    }))
+    .sort((a, b) => Number(a.deleted) - Number(b.deleted))
 
   return (
     <div className="space-y-6">

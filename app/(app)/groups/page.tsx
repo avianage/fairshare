@@ -65,7 +65,7 @@ export default async function GroupsPage() {
       >
         <span className="text-2xl" aria-hidden>💸</span>
         <div className="min-w-0 flex-1">
-          <p className="whitespace-nowrap font-medium">Non-group expenses</p>
+          <p className="truncate font-medium">Non-group expenses</p>
           <p className="truncate text-xs text-muted-foreground">Individual expenses between you and others</p>
         </div>
         <span className={cn(

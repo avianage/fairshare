@@ -12,7 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { Button } from "@/components/ui/button"
 import type { StatementItem } from "@/app/api/statement/route"
 
-type Group = { id: string; name: string }
+type Group = { id: string; name: string; deleted?: boolean }
 
 const PAGE_SIZE = 50
 
@@ -139,6 +139,15 @@ export function StatementTable({ groups }: { groups: Group[] }) {
           value={groupId}
           onChange={(e) => setGroupId(e.target.value)}
           aria-label="Group"
+          renderOption={(opt) => {
+            const g = groups.find((g) => g.id === opt.value)
+            if (!g?.deleted) return opt.label
+            return (
+              <span>
+                {g.name} <span className="text-destructive">(deleted)</span>
+              </span>
+            )
+          }}
         >
           <option value="">All groups</option>
           <option value="direct">Direct</option>

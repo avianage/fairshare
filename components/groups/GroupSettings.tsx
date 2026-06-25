@@ -89,6 +89,8 @@ export function GroupSettings({
   const [busy, setBusy] = useState(false)
   const [checkingBalance, setCheckingBalance] = useState(false)
   const [deleteBlocked, setDeleteBlocked] = useState(false)
+  const [checkingLeave, setCheckingLeave] = useState(false)
+  const [leaveBlocked, setLeaveBlocked] = useState(false)
 
   async function saveDetails(e: React.FormEvent) {
     e.preventDefault()
@@ -253,6 +255,27 @@ export function GroupSettings({
       setTimeout(() => setCopied(false), 2000)
     } catch {
       /* clipboard may be unavailable */
+    }
+  }
+
+  async function handleLeaveClick() {
+    setLeaveBlocked(false)
+    setCheckingLeave(true)
+    try {
+      const res = await fetch(`/api/groups/${group.id}/ledger`)
+      const data = res.ok ? await res.json() : null
+      const myBalance =
+        (data?.memberBalances as { user: { id: string }; netBalance: number }[] | undefined)
+          ?.find((m) => m.user.id === currentUserId)?.netBalance ?? 0
+      if (Math.abs(myBalance) > 0.01) {
+        setLeaveBlocked(true)
+        return
+      }
+      setPending({ kind: "leave" })
+    } catch {
+      toast.error("Could not check your balance.")
+    } finally {
+      setCheckingLeave(false)
     }
   }
 
@@ -539,6 +562,11 @@ export function GroupSettings({
       {/* Danger zone */}
       <section className="rounded-xl border border-destructive/30 bg-card p-6">
         <h2 className="font-medium text-destructive">Danger zone</h2>
+        {leaveBlocked && (
+          <p className="mt-3 text-sm text-destructive">
+            You have unsettled balances in this group. Settle up before leaving.
+          </p>
+        )}
         {deleteBlocked && (
           <p className="mt-3 text-sm text-destructive">
             This group has unsettled balances. Settle all debts between members before deleting the group.
@@ -548,10 +576,10 @@ export function GroupSettings({
           <Button
             type="button"
             variant="outline"
-            onClick={() => setPending({ kind: "leave" })}
-            disabled={busy}
+            onClick={handleLeaveClick}
+            disabled={busy || checkingLeave}
           >
-            Leave group
+            {checkingLeave ? "Checking…" : "Leave group"}
           </Button>
           {isAdmin && (
             <Button
