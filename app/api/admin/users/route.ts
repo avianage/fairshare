@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { auditLog, getClientIp } from "@/lib/audit"
 
 export const runtime = "nodejs"
 
@@ -207,5 +208,6 @@ export async function PATCH(request: NextRequest) {
     select: { id: true, isBanned: true, isAdmin: true, isOwner: true },
   })
 
+  void auditLog({ actorId: session.user.id, action: `admin.${action}`, targetId: userId, ip: getClientIp(request) })
   return NextResponse.json(user)
 }

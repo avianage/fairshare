@@ -4,6 +4,7 @@ import { z } from "zod"
 import bcrypt from "bcryptjs"
 import { authConfig } from "@/lib/auth.config"
 import { prisma } from "@/lib/prisma"
+import { auditLog, getClientIp } from "@/lib/audit"
 
 const credentialsSchema = z.object({
   identifier: z.string().min(1),
@@ -19,7 +20,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
         identifier: { label: "Email or Username", type: "text" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, request) {
         const parsed = credentialsSchema.safeParse(credentials)
         if (!parsed.success) return null
 
@@ -42,12 +43,20 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
           },
         })
 
-        if (!user) return null
-        if (user.isBanned) return null
+        const ip = getClientIp(request as Request)
+
+        if (!user || user.isBanned) {
+          void auditLog({ action: "login.failure", ip, meta: { identifier: clean } })
+          return null
+        }
 
         const passwordMatch = await bcrypt.compare(password, user.passwordHash)
-        if (!passwordMatch) return null
+        if (!passwordMatch) {
+          void auditLog({ actorId: user.id, action: "login.failure", ip, meta: { identifier: clean } })
+          return null
+        }
 
+        void auditLog({ actorId: user.id, action: "login.success", ip })
         return {
           id: user.id,
           name: user.name,

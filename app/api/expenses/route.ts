@@ -8,6 +8,7 @@ import { calculateSplits } from "@/lib/splitEngine"
 import { directExpenseInclude, serializeDirectExpense } from "@/lib/expense-shape"
 import { getDirectExpensesForUser } from "@/lib/directExpenses"
 import { notifyUsers } from "@/lib/notifications"
+import { auditLog, getClientIp } from "@/lib/audit"
 
 const createDirectExpenseSchema = z
   .object({
@@ -183,6 +184,7 @@ export async function POST(request: NextRequest) {
     body: `"${description}" · ₹${amount.toFixed(2)}`,
     url: "/direct-expenses",
   })
+  void auditLog({ actorId: session.user.id, action: "expense.create", targetId: expense.id, ip: getClientIp(request), meta: { amount, description, direct: true } })
 
   revalidatePath('/budgets')
   return NextResponse.json(

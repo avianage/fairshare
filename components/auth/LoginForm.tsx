@@ -86,7 +86,7 @@ export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
             <Input
               id="identifier"
               type="text"
-              placeholder="you@example.com or @yourname"
+              placeholder="@username or email-address"
               autoComplete="username"
               className="bg-background/50 focus:bg-background transition-all"
               aria-invalid={!!errors.identifier}

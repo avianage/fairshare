@@ -4,6 +4,7 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { ForbiddenError, requireGroupAdmin, requireGroupMember } from "@/lib/auth-helpers"
 import { notifyUsers } from "@/lib/notifications"
+import { auditLog, getClientIp } from "@/lib/audit"
 
 type Params = { params: { groupId: string } }
 
@@ -130,6 +131,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     body: "You are now a member of this group.",
     url: `/groups/${params.groupId}`,
   })
+  void auditLog({ actorId: session.user.id, action: "group.member_add", targetId: user.id, ip: getClientIp(request), meta: { groupId: params.groupId } })
 
   return NextResponse.json(
     { member: { id: user.id, name: user.name, email: user.email, role: "MEMBER" } },

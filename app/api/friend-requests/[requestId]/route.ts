@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { notifyUsers } from "@/lib/notifications"
+import { auditLog, getClientIp } from "@/lib/audit"
 
 export const runtime = "nodejs"
 
@@ -28,6 +29,7 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
   }
 
   await prisma.friendRequest.delete({ where: { id: params.requestId } })
+  void auditLog({ actorId: me, action: "friend.request_cancelled", targetId: params.requestId, ip: getClientIp(_req) })
   return NextResponse.json({ ok: true })
 }
 
@@ -62,6 +64,7 @@ export async function PATCH(_req: NextRequest, { params }: Params) {
     body: "You are now friends on Fairshare.",
     url: "/friends",
   })
+  void auditLog({ actorId: me, action: "friend.accepted", targetId: request.senderId, ip: getClientIp(_req) })
 
   return NextResponse.json({ ok: true })
 }

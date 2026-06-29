@@ -250,6 +250,21 @@ model PushSubscription {
   @@index([userId])
 }
 
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  action     String
+  targetId   String?
+  meta       Json?
+  ip         String?
+  suspicious Boolean  @default(false)
+  createdAt  DateTime @default(now())
+
+  @@index([actorId, createdAt])
+  @@index([action, createdAt])
+  @@index([suspicious, createdAt])
+}
+
 model Notification {
   id        String   @id @default(cuid())
   userId    String

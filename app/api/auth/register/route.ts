@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import bcrypt from "bcryptjs"
 import { prisma } from "@/lib/prisma"
+import { auditLog, getClientIp } from "@/lib/audit"
 
 const registerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -100,5 +101,6 @@ export async function POST(request: NextRequest) {
     select: { id: true, name: true, username: true, email: true },
   })
 
+  void auditLog({ actorId: user.id, action: "user.register", ip: getClientIp(request), meta: { email: user.email } })
   return NextResponse.json(user, { status: 201 })
 }

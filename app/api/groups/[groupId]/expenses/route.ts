@@ -8,6 +8,7 @@ import { ForbiddenError, requireGroupMember } from "@/lib/auth-helpers"
 import { calculateSplits } from "@/lib/splitEngine"
 import { expenseInclude, serializeExpense } from "@/lib/expense-shape"
 import { notifyUsers } from "@/lib/notifications"
+import { auditLog, getClientIp } from "@/lib/audit"
 
 type Params = { params: { groupId: string } }
 
@@ -266,6 +267,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     body: `"${description}" · ₹${amount.toFixed(2)} in ${group?.name ?? "a group"}`,
     url: `/groups/${params.groupId}`,
   })
+  void auditLog({ actorId: session.user.id, action: "expense.create", targetId: expense.id, ip: getClientIp(request), meta: { amount, description, groupId: params.groupId } })
 
   revalidatePath('/budgets')
   return NextResponse.json({ expense: serializeExpense(expense) }, { status: 201 })

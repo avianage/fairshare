@@ -6,6 +6,7 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { getPairwiseBalance } from "@/lib/globalBalances"
 import { notifyUsers } from "@/lib/notifications"
+import { auditLog, getClientIp } from "@/lib/audit"
 
 export const runtime = "nodejs"
 
@@ -108,6 +109,7 @@ export async function POST(request: NextRequest) {
     body: `₹${amount.toFixed(2)} (direct payment)`,
     url: `/ledger`,
   })
+  void auditLog({ actorId: senderId, action: "settlement.create", targetId: settlement.id, ip: getClientIp(request), meta: { amount, receiverId: toUserId, direct: true } })
 
   return NextResponse.json(
     { settlement: { ...settlement, amount: settlement.amount.toNumber() } },

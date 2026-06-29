@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma"
 import { ForbiddenError, requireGroupMember } from "@/lib/auth-helpers"
 import { computeGroupBalances } from "@/lib/balances"
 import { notifyUsers } from "@/lib/notifications"
+import { auditLog, getClientIp } from "@/lib/audit"
 
 type Params = { params: { groupId: string } }
 
@@ -128,6 +129,7 @@ export async function POST(request: NextRequest, { params }: Params) {
     body: `₹${amount.toFixed(2)} in ${group?.name ?? "a group"}`,
     url: `/ledger`,
   })
+  void auditLog({ actorId: session.user.id, action: "settlement.create", targetId: settlement.id, ip: getClientIp(request), meta: { amount, senderId, receiverId, groupId: params.groupId } })
 
   return NextResponse.json(
     {

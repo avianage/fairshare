@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { notifyUsers } from "@/lib/notifications"
+import { auditLog, getClientIp } from "@/lib/audit"
 
 type Params = { params: { token: string } }
 
@@ -94,6 +95,7 @@ export async function POST(_request: NextRequest, { params }: Params) {
     body: `Welcome! You are now a member of "${invite.group.name}".`,
     url: `/groups/${invite.groupId}`,
   })
+  void auditLog({ actorId: userId, action: "group.invite_accepted", targetId: invite.groupId, ip: getClientIp(_request), meta: { groupName: invite.group.name } })
 
   return NextResponse.json({ groupId: invite.groupId })
 }

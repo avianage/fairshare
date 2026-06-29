@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma"
 import { ForbiddenError, requireGroupMember } from "@/lib/auth-helpers"
 import { rescaleSplit } from "@/lib/splitEngine"
 import { expenseInclude, serializeExpense } from "@/lib/expense-shape"
+import { auditLog, getClientIp } from "@/lib/audit"
 
 type Params = { params: { groupId: string; expenseId: string } }
 
@@ -155,13 +156,14 @@ export async function PATCH(request: NextRequest, { params }: Params) {
     })
   })
 
+  void auditLog({ actorId: session.user.id, action: "expense.edit", targetId: updated.id, ip: getClientIp(request), meta: { groupId: params.groupId } })
   revalidatePath('/budgets')
   return NextResponse.json({ expense: serializeExpense(updated) })
 }
 
 // DELETE /api/groups/[groupId]/expenses/[expenseId] — soft delete.
 // Allowed for the payer, a group admin, or a site admin.
-export async function DELETE(_request: NextRequest, { params }: Params) {
+export async function DELETE(request: NextRequest, { params }: Params) {
   const session = await auth()
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -199,6 +201,7 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
     data: { deletedAt: new Date() },
   })
 
+  void auditLog({ actorId: session.user.id, action: "expense.delete", targetId: expense.id, ip: getClientIp(request), meta: { groupId: params.groupId } })
   revalidatePath('/budgets')
   return NextResponse.json({ success: true })
 }

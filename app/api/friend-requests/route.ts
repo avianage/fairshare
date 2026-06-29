@@ -3,6 +3,7 @@ import { z } from "zod"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { notifyUsers } from "@/lib/notifications"
+import { auditLog, getClientIp } from "@/lib/audit"
 
 export const runtime = "nodejs"
 
@@ -95,6 +96,7 @@ export async function POST(request: NextRequest) {
       body: "You are now friends on Fairshare.",
       url: "/friends",
     })
+    void auditLog({ actorId: me, action: "friend.accepted", targetId: receiverId, ip: getClientIp(request) })
     return NextResponse.json({ accepted: true }, { status: 201 })
   }
 
@@ -118,5 +120,6 @@ export async function POST(request: NextRequest) {
     url: "/friends",
   })
 
+  void auditLog({ actorId: me, action: "friend.request", targetId: receiverId, ip: getClientIp(request) })
   return NextResponse.json({ id: req.id }, { status: 201 })
 }
