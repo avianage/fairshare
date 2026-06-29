@@ -6,7 +6,7 @@ import { InstallPrompt } from "@/components/InstallPrompt"
 import { ThemedToaster } from "@/components/ThemedToaster"
 import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar"
 
-const inter = Inter({ subsets: ["latin"] })
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
 
 export const metadata: Metadata = {
   title: "Fairshare",
@@ -31,8 +31,8 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+    <html lang="en" className={inter.variable} suppressHydrationWarning>
+      <body className="font-sans antialiased">
         <Providers>{children}</Providers>
         <ThemedToaster />
         <InstallPrompt />

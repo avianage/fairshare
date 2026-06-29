@@ -157,13 +157,21 @@ export async function PATCH(request: NextRequest) {
         if (g.members.length > 0) {
           await tx.group.update({ where: { id: g.id }, data: { ownerId: g.members[0].userId } })
         } else {
-          await tx.group.update({ where: { id: g.id }, data: { deletedAt: new Date() } })
+          await tx.group.update({ where: { id: g.id }, data: { deletedAt: new Date(), ownerId: null } })
         }
       }
+      // Also nullify ownerId on any already-soft-deleted groups still referencing this user
+      await tx.group.updateMany({ where: { ownerId: userId }, data: { ownerId: null } })
       // Remove remaining FK references then delete the user
       await tx.settlement.deleteMany({ where: { OR: [{ senderId: userId }, { receiverId: userId }] } })
       await tx.directParticipant.deleteMany({ where: { userId } })
       await tx.groupMember.deleteMany({ where: { userId } })
+      await tx.groupInvite.deleteMany({ where: { invitedById: userId } })
+      await tx.friendInvite.deleteMany({ where: { invitedById: userId } })
+      await tx.friendship.deleteMany({ where: { OR: [{ userId }, { friendId: userId }] } })
+      await tx.notification.deleteMany({ where: { userId } })
+      await tx.pushSubscription.deleteMany({ where: { userId } })
+      await tx.auditLog.updateMany({ where: { actorId: userId }, data: { actorId: null } })
       await tx.user.delete({ where: { id: userId } })
     })
     return NextResponse.json({ success: true })

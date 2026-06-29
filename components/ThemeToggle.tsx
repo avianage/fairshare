@@ -21,16 +21,16 @@ export function ThemeToggle() {
       // ("light") disagree and React warns about a hydration mismatch.
       title={mounted ? (isDark ? "Switch to light mode" : "Switch to dark mode") : undefined}
       onClick={() => setTheme(isDark ? "light" : "dark")}
-      className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border/80 bg-card/50 text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-foreground hover:border-primary/20 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95"
+      className="inline-flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl border border-border/80 bg-card/50 text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-foreground hover:border-primary/20 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95"
     >
       {mounted ? (
         isDark ? (
-          <Sun className="h-[1.1rem] w-[1.1rem]" />
+          <Sun className="h-[0.95rem] w-[0.95rem] sm:h-[1.1rem] sm:w-[1.1rem]" />
         ) : (
-          <Moon className="h-[1.1rem] w-[1.1rem]" />
+          <Moon className="h-[0.95rem] w-[0.95rem] sm:h-[1.1rem] sm:w-[1.1rem]" />
         )
       ) : (
-        <Sun className="h-[1.1rem] w-[1.1rem] opacity-0" />
+        <Sun className="h-[0.95rem] w-[0.95rem] sm:h-[1.1rem] sm:w-[1.1rem] opacity-0" />
       )}
     </button>
   )

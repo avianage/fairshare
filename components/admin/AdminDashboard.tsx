@@ -194,6 +194,13 @@ function GroupsPanel({ user, onClose }: { user: AdminUser; onClose: () => void }
   )
 }
 
+type ConfirmState = {
+  title: string
+  message: string
+  variant: "destructive" | "warning" | "default"
+  onConfirm: () => void
+} | null
+
 export function AdminDashboard({ currentUserId, currentUserIsOwner }: { currentUserId: string; currentUserIsOwner: boolean }) {
   const [users, setUsers] = useState<AdminUser[]>([])
   const [total, setTotal] = useState(0)
@@ -204,6 +211,7 @@ export function AdminDashboard({ currentUserId, currentUserIsOwner }: { currentU
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null)
   const [groupsUser, setGroupsUser] = useState<AdminUser | null>(null)
+  const [confirmState, setConfirmState] = useState<ConfirmState>(null)
 
   const limit = 20
   const totalPages = Math.max(1, Math.ceil(total / limit))
@@ -225,17 +233,56 @@ export function AdminDashboard({ currentUserId, currentUserIsOwner }: { currentU
     fetchUsers()
   }, [fetchUsers])
 
-  const ACTION_CONFIRMS: Record<string, string> = {
-    ban: "Ban this user? They will lose access to all protected pages.",
-    unban: "Unban this user? They will regain full access.",
-    makeAdmin: "Promote this user to admin? They will have full administrative access.",
-    removeAdmin: "Remove admin access from this user?",
+  const ACTION_META: Record<string, { title: string; message: (name: string) => string; variant: "destructive" | "warning" | "default" }> = {
+    ban: {
+      title: "Ban user",
+      message: (name) => `Ban ${name}? They will immediately lose access to all protected pages.`,
+      variant: "destructive",
+    },
+    unban: {
+      title: "Unban user",
+      message: (name) => `Unban ${name}? They will regain full access to the platform.`,
+      variant: "default",
+    },
+    makeAdmin: {
+      title: "Promote to admin",
+      message: (name) => `Promote ${name} to admin? They will have full administrative access including the ability to ban and delete users.`,
+      variant: "warning",
+    },
+    removeAdmin: {
+      title: "Remove admin access",
+      message: (name) => `Remove admin access from ${name}? They will revert to a regular user.`,
+      variant: "warning",
+    },
   }
 
   function confirmThenAction(userId: string, action: string, name: string) {
-    const msg = ACTION_CONFIRMS[action]
-    if (msg && !confirm(`${name}: ${msg}`)) return
-    performAction(userId, action)
+    const meta = ACTION_META[action]
+    if (!meta) { performAction(userId, action); return }
+    setConfirmState({
+      title: meta.title,
+      message: meta.message(name),
+      variant: meta.variant,
+      onConfirm: () => { setConfirmState(null); performAction(userId, action) },
+    })
+  }
+
+  function confirmDelete(userId: string, name: string) {
+    setConfirmState({
+      title: "Delete user",
+      message: `Permanently delete ${name}? This will remove all their data including expenses and group memberships. This cannot be undone.`,
+      variant: "destructive",
+      onConfirm: () => { setConfirmState(null); performAction(userId, "delete") },
+    })
+  }
+
+  function confirmTransferOwnership(userId: string, name: string) {
+    setConfirmState({
+      title: "Transfer ownership",
+      message: `Transfer ownership to ${name}? You will permanently lose owner privileges. This action cannot be reversed.`,
+      variant: "destructive",
+      onConfirm: () => { setConfirmState(null); performAction(userId, "transferOwnership") },
+    })
   }
 
   async function performAction(userId: string, action: string) {
@@ -388,7 +435,7 @@ export function AdminDashboard({ currentUserId, currentUserIsOwner }: { currentU
                                   )}
                                   {currentUserIsOwner && (
                                     <Button size="sm" variant="outline" className="h-7 gap-1 text-xs text-yellow-600 dark:text-yellow-400 hover:text-yellow-600" disabled={!!actionLoading}
-                                      onClick={() => { if (confirm(`Transfer ownership to ${user.name}? You will lose owner privileges.`)) performAction(user.id, "transferOwnership") }}>
+                                      onClick={() => confirmTransferOwnership(user.id, user.name)}>
                                       <Crown className="h-3 w-3" />
                                     </Button>
                                   )}
@@ -397,11 +444,7 @@ export function AdminDashboard({ currentUserId, currentUserIsOwner }: { currentU
                                     variant="outline"
                                     className="h-7 gap-1 text-xs text-destructive hover:text-destructive"
                                     disabled={!!actionLoading}
-                                    onClick={() => {
-                                      if (confirm(`Delete ${user.name}? This cannot be undone.`)) {
-                                        performAction(user.id, "delete")
-                                      }
-                                    }}
+                                    onClick={() => confirmDelete(user.id, user.name)}
                                   >
                                     <Trash2 className="h-3 w-3" />
                                   </Button>
@@ -485,7 +528,7 @@ export function AdminDashboard({ currentUserId, currentUserIsOwner }: { currentU
                             )}
                             {currentUserIsOwner && (
                               <Button size="sm" variant="outline" className="h-7 gap-1 text-xs text-yellow-600 dark:text-yellow-400" disabled={!!actionLoading}
-                                onClick={() => { if (confirm(`Transfer ownership to ${user.name}? You will lose owner privileges.`)) performAction(user.id, "transferOwnership") }}>
+                                onClick={() => confirmTransferOwnership(user.id, user.name)}>
                                 <Crown className="h-3 w-3" />
                               </Button>
                             )}
@@ -494,11 +537,7 @@ export function AdminDashboard({ currentUserId, currentUserIsOwner }: { currentU
                               variant="outline"
                               className="h-7 text-xs text-destructive"
                               disabled={!!actionLoading}
-                              onClick={() => {
-                                if (confirm(`Delete ${user.name}? This cannot be undone.`)) {
-                                  performAction(user.id, "delete")
-                                }
-                              }}
+                              onClick={() => confirmDelete(user.id, user.name)}
                             >
                               <Trash2 className="h-3 w-3" />
                             </Button>
@@ -544,6 +583,52 @@ export function AdminDashboard({ currentUserId, currentUserIsOwner }: { currentU
           user={groupsUser}
           onClose={() => setGroupsUser(null)}
         />
+      )}
+
+      {confirmState && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setConfirmState(null)} />
+          <div className="relative w-full max-w-md rounded-2xl border border-border/60 bg-card shadow-2xl">
+            {/* Top accent bar */}
+            <div className={`h-1 w-full rounded-t-2xl ${confirmState.variant === "destructive" ? "bg-destructive" : confirmState.variant === "warning" ? "bg-amber-500" : "bg-primary"}`} />
+            <div className="p-6">
+              {/* Icon + title */}
+              <div className="flex items-start gap-4 mb-4">
+                <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full ${
+                  confirmState.variant === "destructive" ? "bg-destructive/10 text-destructive" :
+                  confirmState.variant === "warning" ? "bg-amber-500/10 text-amber-500" :
+                  "bg-primary/10 text-primary"
+                }`}>
+                  {confirmState.variant === "destructive" ? (
+                    <Trash2 className="h-5 w-5" />
+                  ) : confirmState.variant === "warning" ? (
+                    <ShieldCheck className="h-5 w-5" />
+                  ) : (
+                    <UserCheck className="h-5 w-5" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-base font-semibold leading-none mb-1">{confirmState.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{confirmState.message}</p>
+                </div>
+              </div>
+              {/* Actions */}
+              <div className="flex items-center justify-end gap-2 mt-6">
+                <Button variant="outline" size="sm" onClick={() => setConfirmState(null)}>
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  variant={confirmState.variant === "destructive" ? "destructive" : "default"}
+                  className={confirmState.variant === "warning" ? "bg-amber-500 hover:bg-amber-600 text-white" : ""}
+                  onClick={confirmState.onConfirm}
+                >
+                  Confirm
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </>
   )
