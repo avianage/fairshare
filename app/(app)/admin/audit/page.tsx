@@ -41,7 +41,7 @@ export default async function AuditLogPage({
     ? await prisma.user.findMany({ where: { id: { in: actorIds } }, select: { id: true, name: true, email: true } })
     : []
   const actorMap = Object.fromEntries(actors.map((a) => [a.id, a]))
-  const richLogs = logs.map((l) => ({ ...l, actor: l.actorId ? (actorMap[l.actorId] ?? null) : null }))
+  const richLogs = logs.map((l) => ({ ...l, createdAt: l.createdAt.toISOString(), actor: l.actorId ? (actorMap[l.actorId] ?? null) : null }))
 
   const suspiciousCount = await prisma.auditLog.count({ where: { suspicious: true } })
 
