@@ -3,6 +3,7 @@ import { z } from "zod"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { ForbiddenError, requireGroupAdmin, requireGroupMember } from "@/lib/auth-helpers"
+import { notifyUsers } from "@/lib/notifications"
 
 type Params = { params: { groupId: string } }
 
@@ -120,6 +121,14 @@ export async function POST(request: NextRequest, { params }: Params) {
 
   await prisma.groupMember.create({
     data: { userId: user.id, groupId: params.groupId, role: "MEMBER" },
+  })
+
+  const fullGroup = await prisma.group.findUnique({ where: { id: params.groupId }, select: { name: true } })
+  void notifyUsers([user.id], {
+    type: "group_join",
+    title: `You were added to "${fullGroup?.name ?? "a group"}"`,
+    body: "You are now a member of this group.",
+    url: `/groups/${params.groupId}`,
   })
 
   return NextResponse.json(

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { z } from "zod"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { notifyUsers } from "@/lib/notifications"
 
 export const runtime = "nodejs"
 
@@ -87,6 +88,13 @@ export async function POST(request: NextRequest) {
       }),
       prisma.friendRequest.delete({ where: { id: reverseRequest.id } }),
     ])
+    const myName = (await prisma.user.findUnique({ where: { id: me }, select: { name: true } }))?.name ?? "Someone"
+    void notifyUsers([receiverId], {
+      type: "friend_accepted",
+      title: `${myName} accepted your friend request`,
+      body: "You are now friends on Fairshare.",
+      url: "/friends",
+    })
     return NextResponse.json({ accepted: true }, { status: 201 })
   }
 
@@ -100,6 +108,14 @@ export async function POST(request: NextRequest) {
   const req = await prisma.friendRequest.create({
     data: { senderId: me, receiverId },
     select: { id: true },
+  })
+
+  const senderName = (await prisma.user.findUnique({ where: { id: me }, select: { name: true } }))?.name ?? "Someone"
+  void notifyUsers([receiverId], {
+    type: "friend_request",
+    title: `${senderName} sent you a friend request`,
+    body: "Tap to view and respond.",
+    url: "/friends",
   })
 
   return NextResponse.json({ id: req.id }, { status: 201 })

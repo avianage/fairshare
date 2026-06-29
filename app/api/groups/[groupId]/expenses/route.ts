@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma"
 import { ForbiddenError, requireGroupMember } from "@/lib/auth-helpers"
 import { calculateSplits } from "@/lib/splitEngine"
 import { expenseInclude, serializeExpense } from "@/lib/expense-shape"
-import { sendPushToUsers } from "@/lib/push"
+import { notifyUsers } from "@/lib/notifications"
 
 type Params = { params: { groupId: string } }
 
@@ -260,7 +260,8 @@ export async function POST(request: NextRequest, { params }: Params) {
   const group = await prisma.group.findUnique({ where: { id: params.groupId }, select: { name: true } })
   const recipientIds = uniqueMemberIds.filter((id) => id !== payerId)
   const payerName = (await prisma.user.findUnique({ where: { id: payerId }, select: { name: true } }))?.name ?? "Someone"
-  void sendPushToUsers(recipientIds, {
+  void notifyUsers(recipientIds, {
+    type: "expense_added",
     title: `${payerName} added an expense`,
     body: `"${description}" · ₹${amount.toFixed(2)} in ${group?.name ?? "a group"}`,
     url: `/groups/${params.groupId}`,

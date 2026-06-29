@@ -7,7 +7,7 @@ import { prisma } from "@/lib/prisma"
 import { calculateSplits } from "@/lib/splitEngine"
 import { directExpenseInclude, serializeDirectExpense } from "@/lib/expense-shape"
 import { getDirectExpensesForUser } from "@/lib/directExpenses"
-import { sendPushToUsers } from "@/lib/push"
+import { notifyUsers } from "@/lib/notifications"
 
 const createDirectExpenseSchema = z
   .object({
@@ -177,7 +177,8 @@ export async function POST(request: NextRequest) {
   // Fire-and-forget push to all participants except the payer
   const recipientIds = participantIds.filter((id) => id !== payerId)
   const payerName = expense.payer.name ?? "Someone"
-  void sendPushToUsers(recipientIds, {
+  void notifyUsers(recipientIds, {
+    type: "expense_added",
     title: `${payerName} added an expense`,
     body: `"${description}" · ₹${amount.toFixed(2)}`,
     url: "/direct-expenses",

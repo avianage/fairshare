@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { notifyUsers } from "@/lib/notifications"
 
 type Params = { params: { token: string } }
 
@@ -86,6 +87,13 @@ export async function POST(_request: NextRequest, { params }: Params) {
     }
     throw e
   }
+
+  void notifyUsers([userId], {
+    type: "group_join",
+    title: `You joined "${invite.group.name}"`,
+    body: `Welcome! You are now a member of "${invite.group.name}".`,
+    url: `/groups/${invite.groupId}`,
+  })
 
   return NextResponse.json({ groupId: invite.groupId })
 }

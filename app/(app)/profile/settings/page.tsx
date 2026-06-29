@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma"
 import { ProfileForm } from "@/components/profile/ProfileForm"
 import { PasswordForm } from "@/components/profile/PasswordForm"
 import { PaymentRoutingForm } from "@/components/profile/PaymentRoutingForm"
+import { PushNotificationsForm } from "@/components/profile/PushNotificationsForm"
 
 export const metadata = { title: "Account & Security · Fairshare" }
 
@@ -53,6 +54,8 @@ export default async function ProfileSettingsPage() {
       <PasswordForm />
 
       <PaymentRoutingForm initialValue={user.allowPaymentRouting} />
+
+      <PushNotificationsForm />
     </div>
   )
 }

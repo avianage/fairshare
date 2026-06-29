@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
+import { notifyUsers } from "@/lib/notifications"
 
 export const runtime = "nodejs"
 
@@ -53,6 +54,14 @@ export async function PATCH(_req: NextRequest, { params }: Params) {
     }),
     prisma.friendRequest.delete({ where: { id: params.requestId } }),
   ])
+
+  const acceptorName = (await prisma.user.findUnique({ where: { id: me }, select: { name: true } }))?.name ?? "Someone"
+  void notifyUsers([request.senderId], {
+    type: "friend_accepted",
+    title: `${acceptorName} accepted your friend request`,
+    body: "You are now friends on Fairshare.",
+    url: "/friends",
+  })
 
   return NextResponse.json({ ok: true })
 }

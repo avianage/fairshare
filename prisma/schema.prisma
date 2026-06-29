@@ -69,6 +69,7 @@ model User {
   pushSubscriptions   PushSubscription[]
   budgets             Budget[]
   ownedGroups         Group[]             @relation("GroupOwner")
+  notifications       Notification[]
 }
 
 model Group {
@@ -247,6 +248,21 @@ model PushSubscription {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  body      String
+  url       String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, read])
+  @@index([userId, createdAt])
 }
 
 model Budget {

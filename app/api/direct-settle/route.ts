@@ -5,7 +5,7 @@ import { revalidateTag } from "next/cache"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { getPairwiseBalance } from "@/lib/globalBalances"
-import { sendPushToUsers } from "@/lib/push"
+import { notifyUsers } from "@/lib/notifications"
 
 export const runtime = "nodejs"
 
@@ -102,7 +102,8 @@ export async function POST(request: NextRequest) {
   revalidateTag(`global-debts:${senderId}`)
   revalidateTag(`global-debts:${toUserId}`)
 
-  void sendPushToUsers([toUserId], {
+  void notifyUsers([toUserId], {
+    type: "settlement",
     title: `${settlement.sender.name} paid you`,
     body: `₹${amount.toFixed(2)} (direct payment)`,
     url: `/ledger`,

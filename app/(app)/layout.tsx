@@ -4,11 +4,12 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { SignOutButton } from "@/components/SignOutButton"
 import { ThemeToggle } from "@/components/ThemeToggle"
-import { PushSubscriber } from "@/components/PushSubscriber"
+import { NotificationBell } from "@/components/NotificationBell"
 import { SidebarNav, MobileNav } from "@/components/AppNav"
 import { AddExpenseFAB } from "@/components/fab/AddExpenseFAB"
 import { MobilePageTitle } from "@/components/MobilePageTitle"
 import { MobileHeaderLeft } from "@/components/MobileHeaderLeft"
+import { NotificationPrompt } from "@/components/NotificationPrompt"
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const session = await auth()
@@ -72,7 +73,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <span className="hidden text-sm text-muted-foreground md:inline">
               {session.user.name}
             </span>
-            <PushSubscriber />
+            <NotificationBell />
             <ThemeToggle />
             <SignOutButton />
           </div>
@@ -80,7 +81,10 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
         {/* Page content */}
         <main className="flex-1 overflow-y-auto overflow-x-hidden px-3 pt-4 pb-[calc(5.5rem+env(safe-area-inset-bottom))] sm:px-5 sm:pt-5 sm:pb-[calc(5.5rem+env(safe-area-inset-bottom))] md:p-6 lg:p-8">
-          <div className="mx-auto w-full max-w-5xl">{children}</div>
+          <div className="mx-auto w-full max-w-5xl">
+            <NotificationPrompt />
+            {children}
+          </div>
         </main>
 
         {/* Mobile nav row */}
