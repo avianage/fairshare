@@ -55,10 +55,10 @@ export function PushNotificationsForm() {
         body: JSON.stringify({ endpoint: sub.endpoint, keys: { p256dh: json.keys?.p256dh, auth: json.keys?.auth } }),
       })
       setSubscribed(true)
-      // Clear the dismissed flag so the prompt won't be suppressed on other pages
       localStorage.removeItem("notif-prompt-dismissed")
       toast.success("Push notifications enabled!")
-    } catch {
+    } catch (err) {
+      console.error("[PushNotif]", err)
       toast.error("Something went wrong. Try again.")
     } finally {
       setBusy(false)

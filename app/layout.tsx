@@ -4,6 +4,7 @@ import "./globals.css"
 import { Providers } from "./providers"
 import { InstallPrompt } from "@/components/InstallPrompt"
 import { ThemedToaster } from "@/components/ThemedToaster"
+import { ServiceWorkerRegistrar } from "@/components/ServiceWorkerRegistrar"
 
 const inter = Inter({ subsets: ["latin"] })
 
@@ -35,6 +36,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <Providers>{children}</Providers>
         <ThemedToaster />
         <InstallPrompt />
+        <ServiceWorkerRegistrar />
       </body>
     </html>
   )
