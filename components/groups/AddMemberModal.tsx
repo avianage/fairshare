@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { getApiError } from "@/lib/api-error"
 import { X, UserPlus, Copy, Link, Search, Users, CheckCircle2 } from "lucide-react"
@@ -14,7 +15,8 @@ function initials(name: string) {
   return name.split(" ").map((p) => p[0]).slice(0, 2).join("").toUpperCase()
 }
 
-export function AddMemberModal({ groupId }: { groupId: string }) {
+export function AddMemberModal({ groupId, autoOpen }: { groupId: string; autoOpen?: boolean }) {
+  const router = useRouter()
   const [open, setOpen] = useState(false)
   const [tab, setTab] = useState<Tab>("friends")
 
@@ -32,6 +34,13 @@ export function AddMemberModal({ groupId }: { groupId: string }) {
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
+    if (autoOpen) {
+      setOpen(true)
+      router.replace(window.location.pathname, { scroll: false })
+    }
+  }, [autoOpen]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
     if (open) {
       document.body.style.overflow = "hidden"
       loadFriendsAndMembers()
@@ -40,6 +49,13 @@ export function AddMemberModal({ groupId }: { groupId: string }) {
     }
     return () => { document.body.style.overflow = "" }
   }, [open])
+
+  // Auto-generate invite link when on the invite tab and no URL yet
+  useEffect(() => {
+    if (open && tab === "invite" && !inviteUrl && !generating) {
+      generateInvite()
+    }
+  }, [open, tab]) // eslint-disable-line react-hooks/exhaustive-deps
 
   async function loadFriendsAndMembers() {
     setLoadingFriends(true)
@@ -51,8 +67,10 @@ export function AddMemberModal({ groupId }: { groupId: string }) {
         fetch(`/api/groups/${groupId}/members`),
       ])
       const [fData, mData] = await Promise.all([friendsRes.json(), membersRes.json()])
-      setFriends(fData.friends ?? [])
+      const friendList = fData.friends ?? []
+      setFriends(friendList)
       setMemberIds(new Set((mData.members ?? []).map((m: { id: string }) => m.id)))
+      if (friendList.length === 0) setTab("invite")
     } catch {
       toast.error("Could not load friends.")
     } finally {
@@ -267,15 +285,9 @@ export function AddMemberModal({ groupId }: { groupId: string }) {
                 </div>
 
                 {!inviteUrl ? (
-                  <Button
-                    type="button"
-                    onClick={generateInvite}
-                    disabled={generating}
-                    className="w-full gap-2"
-                  >
-                    <Link className="h-4 w-4" />
-                    {generating ? "Generating…" : "Generate invite link"}
-                  </Button>
+                  <p className="text-sm text-center text-muted-foreground">
+                    {generating ? "Generating link…" : "Could not generate link."}
+                  </p>
                 ) : (
                   <div className="space-y-2">
                     <div className="flex gap-2">

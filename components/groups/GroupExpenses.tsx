@@ -94,7 +94,7 @@ export function GroupExpenses({
 
   // Poll every 30 s so other users' new expenses appear without a manual refresh.
   useEffect(() => {
-    const id = setInterval(() => load(filtersRef.current), 30_000)
+    const id = setInterval(() => load(filtersRef.current), 15_000)
     return () => clearInterval(id)
   }, [load])
 

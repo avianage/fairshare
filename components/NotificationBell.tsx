@@ -69,7 +69,7 @@ export function NotificationBell() {
 
   useEffect(() => {
     fetchNotifications()
-    const id = setInterval(fetchNotifications, 60000)
+    const id = setInterval(fetchNotifications, 15_000)
 
     const handler = () => fetchNotifications()
     window.addEventListener("fairshare:expense-changed", handler)

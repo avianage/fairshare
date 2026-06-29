@@ -8,6 +8,7 @@ import { getDirectContacts } from "@/lib/directExpenses"
 import { formatINR } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
+import { AutoRefresh } from "@/components/ui/AutoRefresh"
 
 export default async function GroupsPage() {
   const session = await auth()
@@ -46,6 +47,7 @@ export default async function GroupsPage() {
 
   return (
     <div>
+      <AutoRefresh />
       <div className="mb-6 flex items-center justify-between">
         <div className="hidden md:block">
           <h1 className="text-2xl font-semibold">Groups</h1>

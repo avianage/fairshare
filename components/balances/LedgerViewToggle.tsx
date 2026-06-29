@@ -12,7 +12,7 @@ export function LedgerViewToggle() {
   useEffect(() => {
     const refresh = () => router.refresh()
     window.addEventListener("fairshare:friendship-changed", refresh)
-    const interval = setInterval(refresh, 30_000)
+    const interval = setInterval(refresh, 15_000)
     return () => {
       window.removeEventListener("fairshare:friendship-changed", refresh)
       clearInterval(interval)

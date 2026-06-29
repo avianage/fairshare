@@ -5,6 +5,7 @@ import { auth } from "@/lib/auth"
 import { getDirectContacts } from "@/lib/directExpenses"
 import { formatINR } from "@/lib/format"
 import { cn } from "@/lib/utils"
+import { AutoRefresh } from "@/components/ui/AutoRefresh"
 
 export default async function DirectExpensesPage() {
   const session = await auth()
@@ -17,6 +18,7 @@ export default async function DirectExpensesPage() {
 
   return (
     <div className="space-y-6">
+      <AutoRefresh />
       <Link
         href="/groups"
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground"

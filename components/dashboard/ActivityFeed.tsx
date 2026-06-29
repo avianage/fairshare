@@ -36,7 +36,7 @@ export function ActivityFeed({ activity: initialActivity }: { activity: Activity
   }, [])
 
   useEffect(() => {
-    timerRef.current = setInterval(refresh, 30_000)
+    timerRef.current = setInterval(refresh, 15_000)
     return () => { if (timerRef.current) clearInterval(timerRef.current) }
   }, [])
 

@@ -44,8 +44,8 @@ export default function NewGroupPage() {
       }
 
       const { group } = await res.json()
-      router.push(`/groups/${group.id}`)
       router.refresh()
+      router.push(`/groups/${group.id}?welcome=1`)
     } catch {
       setError("Something went wrong. Please try again.")
       setSubmitting(false)

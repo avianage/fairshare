@@ -22,8 +22,10 @@ function initials(name: string) {
 
 export default async function GroupPage({
   params,
+  searchParams,
 }: {
   params: { groupId: string }
+  searchParams?: { welcome?: string }
 }) {
   const session = await auth()
   if (!session?.user?.id) redirect("/login")
@@ -138,7 +140,7 @@ export default async function GroupPage({
                 Members ({group.members.length})
               </h2>
               {membership.role === "ADMIN" && (
-                <AddMemberModal groupId={group.id} />
+                <AddMemberModal groupId={group.id} autoOpen={searchParams?.welcome === "1"} />
               )}
             </div>
             <ul className="space-y-2">

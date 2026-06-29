@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 import { Search, CheckCircle2 } from "lucide-react"
@@ -54,6 +54,11 @@ export function GroupSettings({
   currentUserId: string
 }) {
   const router = useRouter()
+
+  useEffect(() => {
+    const id = setInterval(() => router.refresh(), 15_000)
+    return () => clearInterval(id)
+  }, [router])
 
   // Details
   const [name, setName] = useState(group.name)

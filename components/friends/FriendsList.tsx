@@ -46,6 +46,16 @@ export function FriendsList({
   const [addToGroupOpenId, setAddToGroupOpenId] = useState<string | null>(null)
   const [addingToGroup, setAddingToGroup] = useState<string | null>(null) // "friendId:groupId"
 
+  // Poll for friendship changes from other users
+  useEffect(() => {
+    const id = setInterval(() => router.refresh(), 15_000)
+    window.addEventListener("fairshare:friendship-changed", () => router.refresh())
+    return () => {
+      clearInterval(id)
+      window.removeEventListener("fairshare:friendship-changed", () => router.refresh())
+    }
+  }, [router])
+
   // Load existing invite link on mount
   useEffect(() => {
     fetch("/api/friends/invite")

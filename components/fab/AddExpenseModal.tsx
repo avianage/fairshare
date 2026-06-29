@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { X, Users, User, Globe, ChevronLeft, Wallet, Plus } from "lucide-react"
+import { X, Users, User, Globe, ChevronLeft, Wallet, Plus, Copy, Link2, Search, CheckCircle2 } from "lucide-react"
 import { ExpenseForm } from "@/components/expenses/ExpenseForm"
 import { DirectExpenseForm } from "@/components/fab/DirectExpenseForm"
 import { Button } from "@/components/ui/button"
@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils"
 
 const CURRENCIES = ["INR", "USD", "EUR", "GBP", "JPY", "AUD", "CAD"]
 
-type Mode = "choose" | "group" | "new-group" | "person" | "anyone" | "solo"
+type Mode = "choose" | "group" | "new-group" | "new-group-members" | "person" | "anyone" | "solo"
 type Member = { id: string; name: string }
 type GroupOption = { id: string; name: string; emoji: string | null }
 
@@ -34,6 +34,7 @@ export function AddExpenseModal({
   const startMode: Mode = initialGroupId ? "group" : (initialMode ?? "choose")
   const [mode, setMode] = useState<Mode>(startMode)
   const [groupId, setGroupId] = useState<string | undefined>(initialGroupId)
+  const [newGroupName, setNewGroupName] = useState<string>("")
   const [groups, setGroups] = useState<GroupOption[] | null>(null)
   const [members, setMembers] = useState<Member[] | null>(null)
 
@@ -91,7 +92,7 @@ export function AddExpenseModal({
     )
   }
 
-  const showBack = mode !== "choose" && mode !== "new-group" && !initialGroupId && !initialMode
+  const showBack = mode !== "choose" && mode !== "new-group" && mode !== "new-group-members" && !initialGroupId && !initialMode
 
   return (
     <div
@@ -120,7 +121,7 @@ export function AddExpenseModal({
               <ChevronLeft className="h-5 w-5" />
             </button>
           )}
-          <h2 className="flex-1 font-semibold">Add expense</h2>
+          <h2 className="flex-1 font-semibold">{mode === "new-group-members" ? "Invite people" : "Add expense"}</h2>
           <button
             type="button"
             onClick={onClose}
@@ -220,8 +221,19 @@ export function AddExpenseModal({
               onCreated={(g) => {
                 setGroups((prev) => (prev ? [...prev, g] : [g]))
                 setGroupId(g.id)
-                setMode("group")
+                setNewGroupName(g.name)
+                setMode("new-group-members")
+                router.refresh()
               }}
+            />
+          )}
+
+          {/* Step 3 — add members to the newly created group */}
+          {mode === "new-group-members" && groupId && (
+            <NewGroupMembersStep
+              groupId={groupId}
+              groupName={newGroupName}
+              onContinue={() => setMode("group")}
             />
           )}
 
@@ -344,6 +356,224 @@ function NewGroupForm({
         {submitting ? "Creating…" : "Create group"}
       </Button>
     </form>
+  )
+}
+
+function NewGroupMembersStep({
+  groupId,
+  groupName,
+  onContinue,
+}: {
+  groupId: string
+  groupName: string
+  onContinue: () => void
+}) {
+  const [tab, setTab] = useState<"friends" | "invite">("friends")
+  const [friends, setFriends] = useState<{ id: string; name: string }[]>([])
+  const [memberIds, setMemberIds] = useState<Set<string>>(new Set())
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState("")
+  const [addingId, setAddingId] = useState<string | null>(null)
+  const [addedIds, setAddedIds] = useState<Set<string>>(new Set())
+  const [inviteUrl, setInviteUrl] = useState<string | null>(null)
+  const [generating, setGenerating] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    Promise.all([
+      fetch("/api/friends").then((r) => r.json()),
+      fetch(`/api/groups/${groupId}/members`).then((r) => r.json()),
+    ])
+      .then(([fData, mData]) => {
+        const f = fData.friends ?? []
+        setFriends(f)
+        setMemberIds(new Set((mData.members ?? []).map((m: { id: string }) => m.id)))
+        if (f.length === 0) setTab("invite")
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false))
+  }, [groupId])
+
+  useEffect(() => {
+    if (tab === "invite" && !inviteUrl && !generating) {
+      setGenerating(true)
+      fetch(`/api/groups/${groupId}/invite`, { method: "POST" })
+        .then((r) => r.json())
+        .then((data) => setInviteUrl(data?.inviteUrl ?? null))
+        .catch(() => {})
+        .finally(() => setGenerating(false))
+    }
+  }, [tab]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  async function addFriend(friend: { id: string; name: string }) {
+    setAddingId(friend.id)
+    try {
+      const res = await fetch(`/api/groups/${groupId}/members`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: friend.id }),
+      })
+      if (res.ok) setAddedIds((prev) => new Set([...prev, friend.id]))
+    } catch {
+      // silent — user can retry
+    } finally {
+      setAddingId(null)
+    }
+  }
+
+  async function copyInvite() {
+    if (!inviteUrl) return
+    await navigator.clipboard.writeText(inviteUrl).catch(() => {})
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  const filtered = friends.filter((f) =>
+    f.name.toLowerCase().includes(search.toLowerCase())
+  )
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-muted-foreground">
+        <span className="font-medium text-foreground">{groupName}</span> is ready! Invite people to start splitting.
+      </p>
+
+      {/* Tabs */}
+      <div className="flex rounded-lg border overflow-hidden text-sm font-medium">
+        <button
+          type="button"
+          onClick={() => setTab("friends")}
+          className={cn(
+            "flex flex-1 items-center justify-center gap-1.5 py-2 transition-colors",
+            tab === "friends"
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:bg-accent hover:text-foreground"
+          )}
+        >
+          <Users className="h-3.5 w-3.5" />
+          From friends
+        </button>
+        <button
+          type="button"
+          onClick={() => setTab("invite")}
+          className={cn(
+            "flex flex-1 items-center justify-center gap-1.5 py-2 transition-colors border-l",
+            tab === "invite"
+              ? "bg-primary text-primary-foreground"
+              : "text-muted-foreground hover:bg-accent hover:text-foreground"
+          )}
+        >
+          <Link2 className="h-3.5 w-3.5" />
+          Invite link
+        </button>
+      </div>
+
+      {/* Friends tab */}
+      {tab === "friends" && (
+        <div className="space-y-3">
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              placeholder="Search friends…"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-8 h-8 text-sm"
+            />
+          </div>
+          {loading ? (
+            <p className="py-4 text-center text-sm text-muted-foreground">Loading…</p>
+          ) : filtered.length === 0 ? (
+            <div className="py-6 text-center text-sm text-muted-foreground">
+              {friends.length === 0 ? (
+                <>
+                  <p>No friends on Fairshare yet.</p>
+                  <button
+                    type="button"
+                    className="mt-1 text-primary hover:underline"
+                    onClick={() => setTab("invite")}
+                  >
+                    Use an invite link instead
+                  </button>
+                </>
+              ) : (
+                <p>No friends match &ldquo;{search}&rdquo;</p>
+              )}
+            </div>
+          ) : (
+            <ul className="space-y-1">
+              {filtered.map((f) => {
+                const inGroup = memberIds.has(f.id) || addedIds.has(f.id)
+                const isAdding = addingId === f.id
+                return (
+                  <li key={f.id} className="flex items-center gap-3 rounded-lg px-2 py-2">
+                    <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+                      {f.name.split(" ").map((p: string) => p[0]).slice(0, 2).join("").toUpperCase()}
+                    </span>
+                    <span className="flex-1 min-w-0 text-sm font-medium truncate">{f.name}</span>
+                    {inGroup ? (
+                      <span className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                        Added
+                      </span>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs shrink-0"
+                        disabled={isAdding}
+                        onClick={() => addFriend(f)}
+                      >
+                        {isAdding ? "Adding…" : "Add"}
+                      </Button>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {/* Invite link tab */}
+      {tab === "invite" && (
+        <div className="space-y-3">
+          <div className="rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground">
+            Share this link — anyone with it can join this group. Expires in 7 days.
+          </div>
+          {generating ? (
+            <p className="text-sm text-center text-muted-foreground">Generating link…</p>
+          ) : inviteUrl ? (
+            <div className="flex gap-2">
+              <Input
+                readOnly
+                value={inviteUrl}
+                onFocus={(e) => e.target.select()}
+                className="flex-1 text-xs"
+              />
+              <Button type="button" variant="secondary" onClick={copyInvite} className="shrink-0">
+                {copied ? "Copied!" : <Copy className="h-4 w-4" />}
+              </Button>
+            </div>
+          ) : (
+            <p className="text-sm text-center text-destructive">Could not generate link. Try again later.</p>
+          )}
+        </div>
+      )}
+
+      {/* Footer */}
+      <div className="space-y-1 pt-2 border-t">
+        <Button type="button" className="w-full" onClick={onContinue}>
+          Continue to expense →
+        </Button>
+        <button
+          type="button"
+          onClick={onContinue}
+          className="w-full py-1 text-xs text-center text-muted-foreground hover:text-foreground"
+        >
+          Skip for now
+        </button>
+      </div>
+    </div>
   )
 }
 

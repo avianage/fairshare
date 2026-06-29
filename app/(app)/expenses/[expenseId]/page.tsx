@@ -8,6 +8,7 @@ import { categoryMeta } from "@/lib/categories"
 import { formatINR, formatExpenseDate } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { ExpenseActions } from "@/components/expenses/ExpenseActions"
+import { AutoRefresh } from "@/components/ui/AutoRefresh"
 
 export default async function ExpenseDetailPage({
   params,
@@ -69,6 +70,7 @@ export default async function ExpenseDetailPage({
 
   return (
     <div className="space-y-5 max-w-lg mx-auto">
+      <AutoRefresh />
       <Link
         href={backHref}
         className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"

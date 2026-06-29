@@ -64,7 +64,7 @@ export function BalanceSummary({
 
   // Poll every 30 s to pick up changes from other users.
   useEffect(() => {
-    const id = setInterval(load, 30_000)
+    const id = setInterval(load, 15_000)
     return () => clearInterval(id)
   }, [load])
 
