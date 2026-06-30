@@ -12,10 +12,11 @@ function generateToken(): string {
 }
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
 
-type Params = { params: { groupId: string } }
+type Params = { params: Promise<{ groupId: string }> }
 
 // POST /api/groups/[groupId]/invite — generate a shareable invite link (ADMIN only).
-export async function POST(_request: NextRequest, { params }: Params) {
+export async function POST(_request: NextRequest, props: Params) {
+  const params = await props.params;
   const session = await auth()
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })

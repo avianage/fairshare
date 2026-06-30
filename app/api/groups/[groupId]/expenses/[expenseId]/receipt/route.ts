@@ -12,7 +12,7 @@ import {
   resolveUploadPath,
 } from "@/lib/uploads"
 
-type Params = { params: { groupId: string; expenseId: string } }
+type Params = { params: Promise<{ groupId: string; expenseId: string }> }
 
 // Load the (non-deleted) expense and the caller's role; authorize payer-or-admin.
 // Returns a NextResponse on failure, or the expense + role on success.
@@ -49,7 +49,8 @@ async function authorize(groupId: string, expenseId: string, userId: string) {
 }
 
 // POST — upload a receipt image (multipart/form-data, field "file").
-export async function POST(request: NextRequest, { params }: Params) {
+export async function POST(request: NextRequest, props: Params) {
+  const params = await props.params;
   const session = await auth()
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -114,7 +115,8 @@ export async function POST(request: NextRequest, { params }: Params) {
 }
 
 // DELETE — remove the receipt (same payer-or-admin auth).
-export async function DELETE(_request: NextRequest, { params }: Params) {
+export async function DELETE(_request: NextRequest, props: Params) {
+  const params = await props.params;
   const session = await auth()
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })

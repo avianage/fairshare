@@ -100,8 +100,8 @@ export async function POST(request: NextRequest) {
   })
 
   // Both parties' cached global balances are now stale.
-  revalidateTag(`global-debts:${senderId}`)
-  revalidateTag(`global-debts:${toUserId}`)
+  revalidateTag(`global-debts:${senderId}`, { expire: 0 })
+  revalidateTag(`global-debts:${toUserId}`, { expire: 0 })
 
   void notifyUsers([toUserId], {
     type: "settlement",

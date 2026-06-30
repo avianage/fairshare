@@ -20,13 +20,14 @@ function initials(name: string) {
     .toUpperCase()
 }
 
-export default async function GroupPage({
-  params,
-  searchParams,
-}: {
-  params: { groupId: string }
-  searchParams?: { welcome?: string }
-}) {
+export default async function GroupPage(
+  props: {
+    params: Promise<{ groupId: string }>
+    searchParams?: Promise<{ welcome?: string }>
+  }
+) {
+  const searchParams = await props.searchParams;
+  const params = await props.params;
   const session = await auth()
   if (!session?.user?.id) redirect("/login")
 

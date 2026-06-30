@@ -6,14 +6,15 @@ import { auditLog, getClientIp } from "@/lib/audit"
 
 export const runtime = "nodejs"
 
-type Params = { params: { requestId: string } }
+type Params = { params: Promise<{ requestId: string }> }
 
 // POST /api/friend-requests/[requestId]/accept — receiver accepts
 // We use a sub-path via the filename convention; this route handles DELETE (decline/cancel)
 // and is co-located with the accept action below.
 
 // DELETE /api/friend-requests/[requestId] — cancel (sender) or decline (receiver)
-export async function DELETE(_req: NextRequest, { params }: Params) {
+export async function DELETE(_req: NextRequest, props: Params) {
+  const params = await props.params;
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   const me = session.user.id
@@ -34,7 +35,8 @@ export async function DELETE(_req: NextRequest, { params }: Params) {
 }
 
 // PATCH /api/friend-requests/[requestId] — receiver accepts
-export async function PATCH(_req: NextRequest, { params }: Params) {
+export async function PATCH(_req: NextRequest, props: Params) {
+  const params = await props.params;
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   const me = session.user.id

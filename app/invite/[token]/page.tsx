@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState, use } from "react";
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import Link from "next/link"
@@ -16,11 +16,12 @@ import {
 type InviteInfo = { groupName: string; inviterName: string }
 type Status = "loading" | "valid" | "invalid"
 
-export default function InvitePage({
-  params,
-}: {
-  params: { token: string }
-}) {
+export default function InvitePage(
+  props: {
+    params: Promise<{ token: string }>
+  }
+) {
+  const params = use(props.params);
   const { token } = params
   const router = useRouter()
   const { status: authStatus } = useSession()

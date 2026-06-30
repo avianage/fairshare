@@ -8,7 +8,7 @@ import { computeGroupBalances } from "@/lib/balances"
 import { notifyUsers } from "@/lib/notifications"
 import { auditLog, getClientIp } from "@/lib/audit"
 
-type Params = { params: { groupId: string } }
+type Params = { params: Promise<{ groupId: string }> }
 
 const settleSchema = z.object({
   senderId: z.string().min(1),
@@ -22,7 +22,8 @@ const settleSchema = z.object({
 })
 
 // POST /api/groups/[groupId]/settle — record that senderId paid receiverId.
-export async function POST(request: NextRequest, { params }: Params) {
+export async function POST(request: NextRequest, props: Params) {
+  const params = await props.params;
   const session = await auth()
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })

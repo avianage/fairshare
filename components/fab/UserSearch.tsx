@@ -33,7 +33,7 @@ export function UserSearch({
   const [suggestions, setSuggestions] = useState<SearchUser[]>([])
   const [loading, setLoading] = useState(false)
   const [focused, setFocused] = useState(false)
-  const debounce = useRef<ReturnType<typeof setTimeout>>()
+  const debounce = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   // Load friend suggestions on mount
   useEffect(() => {

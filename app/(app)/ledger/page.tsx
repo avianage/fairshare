@@ -48,7 +48,7 @@ function BilateralColumn({
               <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary/10 text-sm font-semibold text-primary">
                 {e.avatar ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={e.avatar} alt="" className="h-full w-full object-cover" />
+                  (<img src={e.avatar} alt="" className="h-full w-full object-cover" />)
                 ) : (
                   initials(e.name)
                 )}
@@ -85,14 +85,15 @@ function BilateralColumn({
         ))}
       </ul>
     </section>
-  )
+  );
 }
 
-export default async function LedgerPage({
-  searchParams,
-}: {
-  searchParams: { view?: string }
-}) {
+export default async function LedgerPage(
+  props: {
+    searchParams: Promise<{ view?: string }>
+  }
+) {
+  const searchParams = await props.searchParams;
   const session = await auth()
   if (!session?.user?.id) redirect("/login")
   const userId = session.user.id

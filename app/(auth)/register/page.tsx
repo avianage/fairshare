@@ -2,11 +2,12 @@ import Link from "next/link"
 import { ArrowLeft } from "lucide-react"
 import { RegisterForm } from "@/components/auth/RegisterForm"
 
-export default function RegisterPage({
-  searchParams,
-}: {
-  searchParams: { callbackUrl?: string }
-}) {
+export default async function RegisterPage(
+  props: {
+    searchParams: Promise<{ callbackUrl?: string }>
+  }
+) {
+  const searchParams = await props.searchParams;
   return (
     <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background p-4 selection:bg-primary/20">
       {/* Background glow effects */}

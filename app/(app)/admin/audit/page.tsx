@@ -7,11 +7,12 @@ import { AuditLogTable } from "@/components/admin/AuditLogTable"
 
 export const metadata = { title: "Audit Log · Fairshare" }
 
-export default async function AuditLogPage({
-  searchParams,
-}: {
-  searchParams: { page?: string; action?: string; suspicious?: string }
-}) {
+export default async function AuditLogPage(
+  props: {
+    searchParams: Promise<{ page?: string; action?: string; suspicious?: string }>
+  }
+) {
+  const searchParams = await props.searchParams;
   const session = await auth()
   if (!session?.user?.id || !session.user.isAdmin) redirect("/dashboard")
 

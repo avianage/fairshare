@@ -10,11 +10,12 @@ import { cn } from "@/lib/utils"
 import { ExpenseActions } from "@/components/expenses/ExpenseActions"
 import { AutoRefresh } from "@/components/ui/AutoRefresh"
 
-export default async function ExpenseDetailPage({
-  params,
-}: {
-  params: { expenseId: string }
-}) {
+export default async function ExpenseDetailPage(
+  props: {
+    params: Promise<{ expenseId: string }>
+  }
+) {
+  const params = await props.params;
   const session = await auth()
   if (!session?.user?.id) redirect("/login")
   const userId = session.user.id

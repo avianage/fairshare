@@ -9,7 +9,7 @@ import { rescaleSplit } from "@/lib/splitEngine"
 import { expenseInclude, serializeExpense } from "@/lib/expense-shape"
 import { auditLog, getClientIp } from "@/lib/audit"
 
-type Params = { params: { groupId: string; expenseId: string } }
+type Params = { params: Promise<{ groupId: string; expenseId: string }> }
 
 const CATEGORIES = [
   "FOOD",
@@ -48,7 +48,8 @@ async function loadExpense(groupId: string, expenseId: string) {
 }
 
 // GET /api/groups/[groupId]/expenses/[expenseId]
-export async function GET(_request: NextRequest, { params }: Params) {
+export async function GET(_request: NextRequest, props: Params) {
+  const params = await props.params;
   const session = await auth()
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -74,7 +75,8 @@ export async function GET(_request: NextRequest, { params }: Params) {
 // PATCH /api/groups/[groupId]/expenses/[expenseId]
 // Editable by the payer OR a group admin. If the amount changes, splits are
 // recomputed across the same participants in a transaction.
-export async function PATCH(request: NextRequest, { params }: Params) {
+export async function PATCH(request: NextRequest, props: Params) {
+  const params = await props.params;
   const session = await auth()
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -163,7 +165,8 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 
 // DELETE /api/groups/[groupId]/expenses/[expenseId] — soft delete.
 // Allowed for the payer, a group admin, or a site admin.
-export async function DELETE(request: NextRequest, { params }: Params) {
+export async function DELETE(request: NextRequest, props: Params) {
+  const params = await props.params;
   const session = await auth()
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })

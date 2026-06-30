@@ -4,10 +4,11 @@ import { prisma } from "@/lib/prisma"
 
 export const runtime = "nodejs"
 
-type Params = { params: { token: string } }
+type Params = { params: Promise<{ token: string }> }
 
 // GET /api/friend-invite/[token] — public preview (no auth required)
-export async function GET(_req: Request, { params }: Params) {
+export async function GET(_req: Request, props: Params) {
+  const params = await props.params;
   const invite = await prisma.friendInvite.findUnique({
     where: { token: params.token },
     select: {
@@ -24,7 +25,8 @@ export async function GET(_req: Request, { params }: Params) {
 }
 
 // POST /api/friend-invite/[token] — accept the invite (auth required)
-export async function POST(_req: Request, { params }: Params) {
+export async function POST(_req: Request, props: Params) {
+  const params = await props.params;
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 

@@ -17,7 +17,8 @@ const NativeSelect = React.forwardRef<HTMLSelectElement, NativeSelectProps>(
       if (node === null || node === undefined) return ""
       if (typeof node === "string" || typeof node === "number") return String(node)
       if (Array.isArray(node)) return node.map(getChildrenText).join("")
-      if (React.isValidElement(node)) return getChildrenText(node.props.children)
+      if (React.isValidElement<{ children?: React.ReactNode }>(node))
+        return getChildrenText(node.props.children)
       return ""
     }, [])
 
@@ -25,7 +26,10 @@ const NativeSelect = React.forwardRef<HTMLSelectElement, NativeSelectProps>(
     const options = React.useMemo(() => {
       const list: { value: string; label: string; className?: string }[] = []
       React.Children.forEach(children, (child) => {
-        if (React.isValidElement(child) && child.type === "option") {
+        if (
+          React.isValidElement<{ value?: string; children?: React.ReactNode; className?: string }>(child) &&
+          child.type === "option"
+        ) {
           list.push({
             value: String(child.props.value ?? ""),
             label: getChildrenText(child.props.children),

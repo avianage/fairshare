@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { ForbiddenError, requireGroupMember } from "@/lib/auth-helpers"
 
-type Params = { params: { groupId: string } }
+type Params = { params: Promise<{ groupId: string }> }
 
 function startOfMonth(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), 1)
@@ -11,7 +11,8 @@ function startOfMonth(d: Date) {
 
 // GET /api/groups/[groupId]/stats — spending summary for the group.
 // All figures derive from non-deleted expenses only.
-export async function GET(_request: NextRequest, { params }: Params) {
+export async function GET(_request: NextRequest, props: Params) {
+  const params = await props.params;
   const session = await auth()
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })

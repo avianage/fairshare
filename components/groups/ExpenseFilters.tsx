@@ -33,7 +33,7 @@ export function ExpenseFilters({
   onChange: (next: ExpenseFilterState) => void
 }) {
   const [qInput, setQInput] = useState(value.q)
-  const debounce = useRef<ReturnType<typeof setTimeout>>()
+  const debounce = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   // Keep local search box in sync when filters are cleared externally.
   useEffect(() => {

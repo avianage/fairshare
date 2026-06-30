@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { directExpenseVisibilityWhere } from "@/lib/directExpenses"
-import * as XLSX from "xlsx"
+import ExcelJS from "exceljs"
 
 export type StatementItem = {
   type: "expense" | "settlement"
@@ -170,18 +170,27 @@ export async function GET(req: NextRequest) {
   const total = items.length
 
   if (searchParams.get("format") === "xlsx") {
-    const rows = items.map((i) => ({
-      Date: new Date(i.date).toLocaleDateString("en-IN"),
-      Type: i.type,
-      Description: i.description,
-      Group: i.groupName ?? "Direct",
-      "Amount (₹)": i.amount,
-      Involved: [...new Set(i.involvedUsers.map((u) => u.name))].join(", "),
-    }))
-    const ws = XLSX.utils.json_to_sheet(rows)
-    const wb = XLSX.utils.book_new()
-    XLSX.utils.book_append_sheet(wb, ws, "Statement")
-    const buf = XLSX.write(wb, { type: "buffer", bookType: "xlsx" })
+    const workbook = new ExcelJS.Workbook()
+    const sheet = workbook.addWorksheet("Statement")
+    sheet.columns = [
+      { header: "Date", key: "date" },
+      { header: "Type", key: "type" },
+      { header: "Description", key: "description" },
+      { header: "Group", key: "group" },
+      { header: "Amount (₹)", key: "amount" },
+      { header: "Involved", key: "involved" },
+    ]
+    for (const i of items) {
+      sheet.addRow({
+        date: new Date(i.date).toLocaleDateString("en-IN"),
+        type: i.type,
+        description: i.description,
+        group: i.groupName ?? "Direct",
+        amount: i.amount,
+        involved: [...new Set(i.involvedUsers.map((u) => u.name))].join(", "),
+      })
+    }
+    const buf = await workbook.xlsx.writeBuffer()
     return new Response(buf, {
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

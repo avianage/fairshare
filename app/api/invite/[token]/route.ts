@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma"
 import { notifyUsers } from "@/lib/notifications"
 import { auditLog, getClientIp } from "@/lib/audit"
 
-type Params = { params: { token: string } }
+type Params = { params: Promise<{ token: string }> }
 
 // Look up a valid (unused, non-expired) invite for an existing group.
 // Returns null for any invalid/expired/used token — no distinction is exposed,
@@ -27,7 +27,8 @@ async function findValidInvite(token: string) {
 
 // GET /api/invite/[token] — validate a token and return minimal preview info.
 // Public endpoint (no session required) so the invite page can render a preview.
-export async function GET(_request: NextRequest, { params }: Params) {
+export async function GET(_request: NextRequest, props: Params) {
+  const params = await props.params;
   const invite = await findValidInvite(params.token)
   if (!invite) {
     return NextResponse.json({ error: "Invite not found" }, { status: 404 })
@@ -41,7 +42,8 @@ export async function GET(_request: NextRequest, { params }: Params) {
 
 // POST /api/invite/[token] — accept an invite and join the group as MEMBER.
 // Session required (enforced by middleware, double-checked here).
-export async function POST(_request: NextRequest, { params }: Params) {
+export async function POST(_request: NextRequest, props: Params) {
+  const params = await props.params;
   const session = await auth()
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })

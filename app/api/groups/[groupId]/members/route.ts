@@ -6,7 +6,7 @@ import { ForbiddenError, requireGroupAdmin, requireGroupMember } from "@/lib/aut
 import { notifyUsers } from "@/lib/notifications"
 import { auditLog, getClientIp } from "@/lib/audit"
 
-type Params = { params: { groupId: string } }
+type Params = { params: Promise<{ groupId: string }> }
 
 const addMemberSchema = z.union([
   z.object({ email: z.string().trim().toLowerCase().email("Enter a valid email address") }),
@@ -15,7 +15,8 @@ const addMemberSchema = z.union([
 
 // GET /api/groups/[groupId]/members — list members (any member). Used by the
 // Add-Expense modal to populate the participant list for a group expense.
-export async function GET(_request: NextRequest, { params }: Params) {
+export async function GET(_request: NextRequest, props: Params) {
+  const params = await props.params;
   const session = await auth()
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -41,7 +42,8 @@ export async function GET(_request: NextRequest, { params }: Params) {
 
 // POST /api/groups/[groupId]/members — add an existing Fairshare user to the
 // group by email (ADMIN only). For people without an account, use an invite link.
-export async function POST(request: NextRequest, { params }: Params) {
+export async function POST(request: NextRequest, props: Params) {
+  const params = await props.params;
   const session = await auth()
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })

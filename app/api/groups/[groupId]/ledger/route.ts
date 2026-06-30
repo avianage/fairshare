@@ -3,12 +3,13 @@ import { auth } from "@/lib/auth"
 import { ForbiddenError, requireGroupMember } from "@/lib/auth-helpers"
 import { computeGroupBalances, type MemberInfo } from "@/lib/balances"
 
-type Params = { params: { groupId: string } }
+type Params = { params: Promise<{ groupId: string }> }
 
 const UNKNOWN: MemberInfo = { id: "", name: "Unknown", avatar: null }
 
 // GET /api/groups/[groupId]/ledger — simplified debts + per-member net balances.
-export async function GET(_request: NextRequest, { params }: Params) {
+export async function GET(_request: NextRequest, props: Params) {
+  const params = await props.params;
   const session = await auth()
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })

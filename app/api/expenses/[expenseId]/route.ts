@@ -10,7 +10,7 @@ import {
   serializeDirectExpense,
 } from "@/lib/expense-shape"
 
-type Params = { params: { expenseId: string } }
+type Params = { params: Promise<{ expenseId: string }> }
 
 const updateDirectExpenseSchema = z
   .object({
@@ -48,7 +48,8 @@ function isParticipant(
 }
 
 // GET /api/expenses/[expenseId] — visible only to participants.
-export async function GET(_request: NextRequest, { params }: Params) {
+export async function GET(_request: NextRequest, props: Params) {
+  const params = await props.params;
   const session = await auth()
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -66,7 +67,8 @@ export async function GET(_request: NextRequest, { params }: Params) {
 
 // PATCH /api/expenses/[expenseId] — edit. Only the payer may edit a direct
 // expense (there is no group-admin concept here).
-export async function PATCH(request: NextRequest, { params }: Params) {
+export async function PATCH(request: NextRequest, props: Params) {
+  const params = await props.params;
   const session = await auth()
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -143,7 +145,8 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 }
 
 // DELETE /api/expenses/[expenseId] — soft delete. Only the payer may delete.
-export async function DELETE(_request: NextRequest, { params }: Params) {
+export async function DELETE(_request: NextRequest, props: Params) {
+  const params = await props.params;
   const session = await auth()
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })

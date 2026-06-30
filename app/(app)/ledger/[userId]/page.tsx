@@ -8,11 +8,12 @@ import { formatINR, formatExpenseDate } from "@/lib/format"
 import { PairwiseSettleButton } from "@/components/balances/PairwiseSettleButton"
 import { cn } from "@/lib/utils"
 
-export default async function PairwiseBalancePage({
-  params,
-}: {
-  params: { userId: string }
-}) {
+export default async function PairwiseBalancePage(
+  props: {
+    params: Promise<{ userId: string }>
+  }
+) {
+  const params = await props.params;
   const session = await auth()
   if (!session?.user?.id) redirect("/login")
 

@@ -27,10 +27,11 @@ const updateGroupSchema = z
   })
   .refine((data) => Object.keys(data).length > 0, "No fields to update")
 
-type Params = { params: { groupId: string } }
+type Params = { params: Promise<{ groupId: string }> }
 
 // GET /api/groups/[groupId] — group detail with full member list.
-export async function GET(_request: NextRequest, { params }: Params) {
+export async function GET(_request: NextRequest, props: Params) {
+  const params = await props.params;
   const session = await auth()
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -96,7 +97,8 @@ export async function GET(_request: NextRequest, { params }: Params) {
 }
 
 // PATCH /api/groups/[groupId] — update name/emoji/description (ADMIN only).
-export async function PATCH(request: NextRequest, { params }: Params) {
+export async function PATCH(request: NextRequest, props: Params) {
+  const params = await props.params;
   const session = await auth()
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -159,7 +161,8 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 }
 
 // DELETE /api/groups/[groupId] — soft-delete the group (ADMIN only).
-export async function DELETE(_request: NextRequest, { params }: Params) {
+export async function DELETE(_request: NextRequest, props: Params) {
+  const params = await props.params;
   const session = await auth()
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })

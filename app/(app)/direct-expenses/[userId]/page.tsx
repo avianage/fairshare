@@ -9,11 +9,12 @@ import { cn } from "@/lib/utils"
 import { ExpenseCard } from "@/components/expenses/ExpenseCard"
 import { DirectSettleButton } from "@/components/balances/DirectSettleButton"
 
-export default async function DirectExpensePersonPage({
-  params,
-}: {
-  params: { userId: string }
-}) {
+export default async function DirectExpensePersonPage(
+  props: {
+    params: Promise<{ userId: string }>
+  }
+) {
+  const params = await props.params;
   const session = await auth()
   if (!session?.user?.id) redirect("/login")
 

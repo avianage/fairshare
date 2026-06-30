@@ -4,11 +4,12 @@ import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { GroupSettings } from "@/components/groups/GroupSettings"
 
-export default async function GroupSettingsPage({
-  params,
-}: {
-  params: { groupId: string }
-}) {
+export default async function GroupSettingsPage(
+  props: {
+    params: Promise<{ groupId: string }>
+  }
+) {
+  const params = await props.params;
   const session = await auth()
   if (!session?.user?.id) redirect("/login")
 

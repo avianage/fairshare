@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useRef, useState } from "react"
+import { useCallback, useEffect, useRef, useState, use } from "react";
 import { useRouter } from "next/navigation"
 import { useSession } from "next-auth/react"
 import Link from "next/link"
@@ -9,7 +9,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 
 type Status = "loading" | "valid" | "invalid" | "expired"
 
-export default function FriendInvitePage({ params }: { params: { token: string } }) {
+export default function FriendInvitePage(props: { params: Promise<{ token: string }> }) {
+  const params = use(props.params);
   const { token } = params
   const router = useRouter()
   const { status: authStatus } = useSession()

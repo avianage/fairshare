@@ -9,12 +9,13 @@ import {
 } from "@/lib/auth-helpers"
 import { computeGroupBalances } from "@/lib/balances"
 
-type Params = { params: { groupId: string; userId: string } }
+type Params = { params: Promise<{ groupId: string; userId: string }> }
 
 const patchMemberSchema = z.object({ role: z.enum(["ADMIN", "MEMBER"]) })
 
 // PATCH /api/groups/[groupId]/members/[userId] — promote or demote a member (owner only).
-export async function PATCH(request: NextRequest, { params }: Params) {
+export async function PATCH(request: NextRequest, props: Params) {
+  const params = await props.params;
   const session = await auth()
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -68,7 +69,8 @@ export async function PATCH(request: NextRequest, { params }: Params) {
 //  - Removing anyone else requires ADMIN.
 //  - The last ADMIN cannot be removed (would orphan the group).
 //  - The last remaining member cannot be removed (use group delete instead).
-export async function DELETE(_request: NextRequest, { params }: Params) {
+export async function DELETE(_request: NextRequest, props: Params) {
+  const params = await props.params;
   const session = await auth()
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })

@@ -5,7 +5,8 @@ import { prisma } from "@/lib/prisma"
 export const runtime = "nodejs"
 
 // DELETE /api/friends/[friendId] — remove friendship (both directions)
-export async function DELETE(_req: Request, { params }: { params: { friendId: string } }) {
+export async function DELETE(_req: Request, props: { params: Promise<{ friendId: string }> }) {
+  const params = await props.params;
   const session = await auth()
   if (!session?.user?.id) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 

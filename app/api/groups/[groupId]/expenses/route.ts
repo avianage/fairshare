@@ -10,7 +10,7 @@ import { expenseInclude, serializeExpense } from "@/lib/expense-shape"
 import { notifyUsers } from "@/lib/notifications"
 import { auditLog, getClientIp } from "@/lib/audit"
 
-type Params = { params: { groupId: string } }
+type Params = { params: Promise<{ groupId: string }> }
 
 const CATEGORIES = [
   "FOOD",
@@ -45,7 +45,8 @@ const createExpenseSchema = z.object({
 })
 
 // GET /api/groups/[groupId]/expenses — paginated, non-deleted expenses.
-export async function GET(request: NextRequest, { params }: Params) {
+export async function GET(request: NextRequest, props: Params) {
+  const params = await props.params;
   const session = await auth()
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -116,7 +117,8 @@ export async function GET(request: NextRequest, { params }: Params) {
 }
 
 // POST /api/groups/[groupId]/expenses — create an equal-split expense.
-export async function POST(request: NextRequest, { params }: Params) {
+export async function POST(request: NextRequest, props: Params) {
+  const params = await props.params;
   const session = await auth()
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
