@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client"
 import { prisma } from "./prisma"
 import { notifyUsers } from "./notifications"
 
@@ -78,7 +79,7 @@ export async function auditLog(entry: AuditEntry) {
         actorId: entry.actorId,
         action: entry.action,
         targetId: entry.targetId,
-        meta: entry.meta ?? {},
+        meta: (entry.meta ?? {}) as Prisma.InputJsonValue,
         ip: entry.ip,
         suspicious,
       },

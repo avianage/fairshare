@@ -155,7 +155,7 @@ export function AuditLogTable({ logs, total, page, totalPages, currentAction, sh
                   </td>
                   <td className="max-w-[200px] px-4 py-3 text-xs text-muted-foreground">
                     {log.targetId && <p className="truncate font-mono text-[11px]">{log.targetId}</p>}
-                    {log.meta && Object.keys(log.meta as Record<string, unknown>).length > 0 && (
+                    {log.meta != null && Object.keys(log.meta as Record<string, unknown>).length > 0 && (
                       <p className="truncate">{JSON.stringify(log.meta)}</p>
                     )}
                   </td>

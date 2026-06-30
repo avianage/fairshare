@@ -78,13 +78,13 @@ model Group {
   emoji              String?
   description        String?
   currency           String    @default("INR")
-  ownerId            String
+  ownerId            String?
   allowMemberInvites Boolean   @default(false)
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
   deletedAt          DateTime?
 
-  owner       User          @relation("GroupOwner", fields: [ownerId], references: [id])
+  owner       User?         @relation("GroupOwner", fields: [ownerId], references: [id])
   members     GroupMember[]
   invites     GroupInvite[]
   expenses    Expense[]
