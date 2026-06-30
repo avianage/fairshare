@@ -1,7 +1,8 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
-import { Bell, BellOff, Receipt, Handshake, UserPlus, Users, Check } from "lucide-react"
+import { createPortal } from "react-dom"
+import { Bell, BellOff, Receipt, Handshake, UserPlus, Users, Check, X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { toast } from "sonner"
@@ -50,6 +51,12 @@ export function NotificationBell() {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
 
+  // Mobile drawer states
+  const [isMobile, setIsMobile] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
+  const [showDrawer, setShowDrawer] = useState(false)
+  const [mounted, setMounted] = useState(false)
+
   // Push subscription state
   const [pushSupported, setPushSupported] = useState(false)
   const [pushSubscribed, setPushSubscribed] = useState(false)
@@ -80,13 +87,51 @@ export function NotificationBell() {
     }
   }, [fetchNotifications])
 
+  // Check screen size and set mounted state on client side
   useEffect(() => {
-    if (typeof window === "undefined") return
-    if (!("Notification" in window) || !("serviceWorker" in navigator)) return
-    setPushSupported(true)
-    navigator.serviceWorker.ready.then((reg) => {
-      reg.pushManager.getSubscription().then((sub) => setPushSubscribed(!!sub))
-    }).catch(() => null)
+    setMounted(true)
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768)
+    }
+    checkMobile()
+    window.addEventListener("resize", checkMobile)
+    
+    // Check push support
+    if (typeof window !== "undefined" && "Notification" in window && "serviceWorker" in navigator) {
+      setPushSupported(true)
+      navigator.serviceWorker.ready.then((reg) => {
+        reg.pushManager.getSubscription().then((sub) => setPushSubscribed(!!sub))
+      }).catch(() => null)
+    }
+
+    return () => {
+      window.removeEventListener("resize", checkMobile)
+    }
+  }, [])
+
+  // Slide-up drawer animation trigger
+  useEffect(() => {
+    if (mobileOpen) {
+      document.body.style.overflow = "hidden"
+      const timer = setTimeout(() => {
+        setShowDrawer(true)
+      }, 10)
+      return () => {
+        clearTimeout(timer)
+      }
+    } else {
+      document.body.style.overflow = ""
+      setShowDrawer(false)
+    }
+  }, [mobileOpen])
+
+  const handleCloseDrawer = useCallback(() => {
+    setShowDrawer(false)
+    document.body.style.overflow = ""
+    const timer = setTimeout(() => {
+      setMobileOpen(false)
+    }, 300)
+    return () => clearTimeout(timer)
   }, [])
 
   async function markAllRead() {
@@ -106,7 +151,11 @@ export function NotificationBell() {
       setUnreadCount((c) => Math.max(0, c - 1))
     }
     if (n.url) {
-      setOpen(false)
+      if (isMobile) {
+        handleCloseDrawer()
+      } else {
+        setOpen(false)
+      }
       router.push(n.url)
     }
   }
@@ -152,6 +201,123 @@ export function NotificationBell() {
     } finally {
       setPushBusy(false)
     }
+  }
+
+  const renderMobileDrawer = () => {
+    if (!mounted || !mobileOpen) return null
+
+    return createPortal(
+      <div
+        className={`fixed inset-0 z-[100] flex h-full w-full flex-col bg-background transition-transform duration-300 ease-out pb-safe ${
+          showDrawer ? "translate-y-0" : "translate-y-full"
+        }`}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between border-b px-5 py-4 shadow-sm bg-card">
+          <div className="flex items-center gap-2.5">
+            <span className="text-lg font-bold text-foreground">Notifications</span>
+            {unreadCount > 0 && (
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1.5 text-[10px] font-bold text-destructive-foreground">
+                {unreadCount}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            {unreadCount > 0 && (
+              <button
+                onClick={markAllRead}
+                className="flex items-center gap-1 rounded-lg bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary hover:bg-primary/20 active:scale-95 transition-all"
+              >
+                <Check className="h-3.5 w-3.5" />
+                Mark all read
+              </button>
+            )}
+            {pushSupported && (
+              <button
+                onClick={togglePush}
+                disabled={pushBusy}
+                title={pushSubscribed ? "Disable push notifications" : "Enable push notifications"}
+                className="rounded-lg p-2 text-muted-foreground hover:bg-accent hover:text-foreground active:scale-95 transition-all disabled:opacity-50"
+                aria-label={pushSubscribed ? "Disable push notifications" : "Enable push notifications"}
+              >
+                {pushSubscribed ? <Bell className="h-4 w-4 fill-current text-primary" /> : <BellOff className="h-4 w-4" />}
+              </button>
+            )}
+            <button
+              onClick={handleCloseDrawer}
+              className="rounded-lg p-2 text-muted-foreground hover:bg-accent hover:text-foreground active:scale-95 transition-all"
+              aria-label="Close"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* List */}
+        <div className="flex-1 overflow-y-auto px-4 py-4">
+          {notifications.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-3 py-24 text-muted-foreground">
+              <div className="rounded-full bg-muted/40 p-4">
+                <Bell className="h-12 w-12 opacity-40 text-muted-foreground" />
+              </div>
+              <p className="text-base font-semibold">No notifications yet</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {notifications.map((n) => (
+                <button
+                  key={n.id}
+                  onClick={() => handleNotificationClick(n)}
+                  className={`flex w-full items-start gap-4 rounded-xl px-4 py-4 text-left transition-all active:bg-accent/80 border ${
+                    !n.read ? "bg-primary/5 border-primary/15 shadow-sm" : "bg-card border-border hover:bg-accent/40"
+                  }`}
+                >
+                  <div className="mt-0.5 shrink-0 rounded-xl bg-background p-2.5 border border-border shadow-sm">
+                    {typeIcon(n.type)}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2 mb-1">
+                      <p className={`truncate text-sm ${!n.read ? "font-bold text-foreground" : "font-semibold text-muted-foreground"}`}>
+                        {n.title}
+                      </p>
+                      <span className="shrink-0 text-[10px] text-muted-foreground font-semibold">
+                        {relativeTime(n.createdAt)}
+                      </span>
+                    </div>
+                    <p className="line-clamp-2 text-xs text-muted-foreground/95 leading-relaxed">{n.body}</p>
+                  </div>
+                  {!n.read && (
+                    <span className="mt-3 shrink-0 block h-2.5 w-2.5 rounded-full bg-primary shadow-sm shadow-primary/45" />
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>,
+      document.body
+    )
+  }
+
+  if (mounted && isMobile) {
+    return (
+      <>
+        <button
+          type="button"
+          onClick={() => setMobileOpen(true)}
+          className="relative inline-flex h-9 w-9 items-center justify-center rounded-xl border border-border/80 bg-card/50 text-muted-foreground transition-all duration-200 hover:bg-accent hover:text-foreground hover:border-primary/20 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring active:scale-95"
+          aria-label="Notifications"
+        >
+          <Bell className="h-4 w-4" />
+          {unreadCount > 0 && (
+            <span className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
+              {unreadCount > 9 ? "9+" : unreadCount}
+            </span>
+          )}
+        </button>
+        {renderMobileDrawer()}
+      </>
+    )
   }
 
   return (

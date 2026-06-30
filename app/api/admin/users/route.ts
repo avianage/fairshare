@@ -24,12 +24,12 @@ export async function GET(request: NextRequest) {
 
   const where = search
     ? {
-        OR: [
-          { name: { contains: search, mode: "insensitive" as const } },
-          { email: { contains: search, mode: "insensitive" as const } },
-          { username: { contains: search, mode: "insensitive" as const } },
-        ],
-      }
+      OR: [
+        { name: { contains: search, mode: "insensitive" as const } },
+        { email: { contains: search, mode: "insensitive" as const } },
+        { username: { contains: search, mode: "insensitive" as const } },
+      ],
+    }
     : {}
 
   const [users, total] = await Promise.all([
