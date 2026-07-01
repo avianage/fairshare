@@ -12,12 +12,43 @@ export interface AuditEntry {
 
 const SUSPICIOUS_THRESHOLDS = {
   "login.failure": { window: 10 * 60 * 1000, count: 5 },
-  "expense.delete": { window: 60 * 1000, count: 1, checkAge: true },
+  "expense.delete": { fastWindow: 60 * 1000, repeatWindow: 10 * 60 * 1000 },
   "expense.create": { window: 60 * 1000, count: 5 },
   "forbidden": { window: 5 * 60 * 1000, count: 3 },
 } as const
 
-async function isSuspicious(entry: AuditEntry): Promise<boolean> {
+type SuspicionResult = { suspicious: boolean; extraMeta?: Record<string, unknown> }
+
+/**
+ * A delete is only interesting if it happened fast (<60s after creation) AND
+ * wasn't done by the person who created it — a user fixing their own typo by
+ * deleting-and-redoing an expense they just added is normal, not suspicious.
+ * The original creator is looked up via the `expense.create` audit row for
+ * this expense (there's no createdById column on Expense).
+ */
+async function isFastNonSelfDelete(entry: AuditEntry): Promise<boolean> {
+  const { actorId, targetId } = entry
+  if (!targetId || !actorId) return false
+
+  const expense = await prisma.expense.findUnique({
+    where: { id: targetId },
+    select: { createdAt: true },
+  })
+  if (!expense) return false
+  if (Date.now() - expense.createdAt.getTime() >= SUSPICIOUS_THRESHOLDS["expense.delete"].fastWindow) {
+    return false
+  }
+
+  const createEntry = await prisma.auditLog.findFirst({
+    where: { action: "expense.create", targetId },
+    orderBy: { createdAt: "asc" },
+    select: { actorId: true },
+  })
+
+  return !!createEntry && createEntry.actorId !== actorId
+}
+
+async function isSuspicious(entry: AuditEntry): Promise<SuspicionResult> {
   const { action, actorId, ip, targetId } = entry
   const since = new Date()
 
@@ -30,24 +61,34 @@ async function isSuspicious(entry: AuditEntry): Promise<boolean> {
       const ipCount = await prisma.auditLog.count({
         where: { action: "login.failure", ip, createdAt: { gte: since } },
       })
-      if (ipCount >= 4) return true
+      if (ipCount >= 4) return { suspicious: true }
     }
     // 3+ failures on same account in 10 min
     if (actorId) {
       const userCount = await prisma.auditLog.count({
         where: { action: "login.failure", actorId, createdAt: { gte: since } },
       })
-      if (userCount >= 2) return true
+      if (userCount >= 2) return { suspicious: true }
     }
   }
 
   if (action === "expense.delete" && targetId) {
-    // Deleted within 60s of creation
-    const expense = await prisma.expense.findUnique({
-      where: { id: targetId },
-      select: { createdAt: true },
+    const fastNonSelf = await isFastNonSelfDelete(entry)
+    if (!fastNonSelf) return { suspicious: false, extraMeta: { fastNonSelf: false } }
+
+    // Not suspicious on its own — only when it's a repeat pattern by the same
+    // actor within the last 10 minutes (a single fast non-self delete happens
+    // legitimately, e.g. a group admin cleaning up an obvious duplicate).
+    since.setTime(Date.now() - SUSPICIOUS_THRESHOLDS["expense.delete"].repeatWindow)
+    const priorCount = await prisma.auditLog.count({
+      where: {
+        action: "expense.delete",
+        actorId,
+        createdAt: { gte: since },
+        meta: { path: ["fastNonSelf"], equals: true },
+      },
     })
-    if (expense && Date.now() - expense.createdAt.getTime() < 60_000) return true
+    return { suspicious: priorCount >= 1, extraMeta: { fastNonSelf: true } }
   }
 
   if (action === "expense.create" && actorId) {
@@ -56,7 +97,7 @@ async function isSuspicious(entry: AuditEntry): Promise<boolean> {
     const count = await prisma.auditLog.count({
       where: { action: "expense.create", actorId, createdAt: { gte: since } },
     })
-    if (count >= 4) return true
+    if (count >= 4) return { suspicious: true }
   }
 
   if (action === "forbidden" && actorId) {
@@ -64,22 +105,22 @@ async function isSuspicious(entry: AuditEntry): Promise<boolean> {
     const count = await prisma.auditLog.count({
       where: { action: "forbidden", actorId, createdAt: { gte: since } },
     })
-    if (count >= 2) return true
+    if (count >= 2) return { suspicious: true }
   }
 
-  return false
+  return { suspicious: false }
 }
 
 export async function auditLog(entry: AuditEntry) {
   try {
-    const suspicious = await isSuspicious(entry)
+    const { suspicious, extraMeta } = await isSuspicious(entry)
 
     await prisma.auditLog.create({
       data: {
         actorId: entry.actorId,
         action: entry.action,
         targetId: entry.targetId,
-        meta: (entry.meta ?? {}) as Prisma.InputJsonValue,
+        meta: { ...entry.meta, ...extraMeta } as Prisma.InputJsonValue,
         ip: entry.ip,
         suspicious,
       },
@@ -88,7 +129,7 @@ export async function auditLog(entry: AuditEntry) {
     // Push-notify all admins when something suspicious is detected
     if (suspicious) {
       const admins = await prisma.user.findMany({
-        where: { isAdmin: true },
+        where: { isAdmin: true, muteSecurityAlerts: false },
         select: { id: true },
       })
       const adminIds = admins.map((a) => a.id).filter((id) => id !== entry.actorId)

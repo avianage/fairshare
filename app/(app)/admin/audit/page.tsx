@@ -4,6 +4,7 @@ import { ChevronLeft, ShieldAlert } from "lucide-react"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { AuditLogTable } from "@/components/admin/AuditLogTable"
+import { MuteAlertsToggle } from "@/components/admin/MuteAlertsToggle"
 
 export const metadata = { title: "Audit Log · Fairshare" }
 
@@ -26,7 +27,7 @@ export default async function AuditLogPage(
     ...(suspicious !== undefined ? { suspicious } : {}),
   }
 
-  const [logs, total] = await Promise.all([
+  const [logs, total, currentUser] = await Promise.all([
     prisma.auditLog.findMany({
       where,
       orderBy: { createdAt: "desc" },
@@ -35,6 +36,7 @@ export default async function AuditLogPage(
       select: { id: true, actorId: true, action: true, targetId: true, meta: true, ip: true, suspicious: true, createdAt: true },
     }),
     prisma.auditLog.count({ where }),
+    prisma.user.findUnique({ where: { id: session.user.id }, select: { muteSecurityAlerts: true } }),
   ])
 
   const actorIds = [...new Set(logs.map((l) => l.actorId).filter(Boolean))] as string[]
@@ -56,22 +58,25 @@ export default async function AuditLogPage(
           <ChevronLeft className="h-4 w-4" />
           Back to Admin
         </Link>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Audit Log</h1>
             <p className="mt-1 text-sm text-muted-foreground">
               All significant actions across the platform.
             </p>
           </div>
-          {suspiciousCount > 0 && (
-            <Link
-              href="/admin/audit?suspicious=true"
-              className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive hover:bg-destructive/20 transition-colors"
-            >
-              <ShieldAlert className="h-4 w-4" />
-              {suspiciousCount} suspicious
-            </Link>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            {suspiciousCount > 0 && (
+              <Link
+                href="/admin/audit?suspicious=true"
+                className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm font-medium text-destructive hover:bg-destructive/20 transition-colors self-start sm:self-auto"
+              >
+                <ShieldAlert className="h-4 w-4 shrink-0" />
+                <span className="whitespace-nowrap">{suspiciousCount} suspicious</span>
+              </Link>
+            )}
+            <MuteAlertsToggle initialMuted={currentUser?.muteSecurityAlerts ?? false} />
+          </div>
         </div>
       </div>
 

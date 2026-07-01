@@ -48,6 +48,7 @@ model User {
   isAdmin             Boolean   @default(false)
   isOwner             Boolean   @default(false)
   isBanned            Boolean   @default(false)
+  muteSecurityAlerts  Boolean   @default(false)
   totalMonthlyBudget    Decimal?    @db.Decimal(12, 2)
   budgetModel           BudgetModel @default(NET_PAYMENT)
   allowPaymentRouting   Boolean     @default(false)

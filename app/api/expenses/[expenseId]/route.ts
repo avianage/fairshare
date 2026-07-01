@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client"
 import { auth } from "@/lib/auth"
 import { prisma } from "@/lib/prisma"
 import { rescaleSplit } from "@/lib/splitEngine"
+import { auditLog, getClientIp } from "@/lib/audit"
 import {
   directExpenseInclude,
   serializeDirectExpense,
@@ -145,7 +146,7 @@ export async function PATCH(request: NextRequest, props: Params) {
 }
 
 // DELETE /api/expenses/[expenseId] — soft delete. Only the payer may delete.
-export async function DELETE(_request: NextRequest, props: Params) {
+export async function DELETE(request: NextRequest, props: Params) {
   const params = await props.params;
   const session = await auth()
   if (!session?.user?.id) {
@@ -181,6 +182,7 @@ export async function DELETE(_request: NextRequest, props: Params) {
     data: { deletedAt: new Date() },
   })
 
+  void auditLog({ actorId: session.user.id, action: "expense.delete", targetId: expense.id, ip: getClientIp(request) })
   revalidatePath('/budgets')
   return NextResponse.json({ success: true })
 }
