@@ -1,9 +1,15 @@
 # Production stack — connects to the external Postgres at 192.168.0.41:5432.
 # Env vars are loaded from .env automatically by Docker Compose.
 #
-#   docker compose up -d
+# Build:  docker compose build
+#   (or)  docker build --build-arg NEXT_PUBLIC_VAPID_PUBLIC_KEY=<key> -t fairshare:latest .
+# Run:    docker compose up -d
 services:
   app:
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_VAPID_PUBLIC_KEY: ${NEXT_PUBLIC_VAPID_PUBLIC_KEY}
     container_name: fairshare
     image: fairshare:latest
     restart: unless-stopped
@@ -13,6 +19,13 @@ services:
       NEXTAUTH_URL: ${NEXTAUTH_URL:-http://192.168.0.42:3005}
       UPLOAD_DIR: /data/uploads
       APP_VERSION: ${APP_VERSION:-docker}
+      # VAPID — public key is also baked into the image at build time via ARG;
+      # the runtime env var keeps the /api/notifications/vapid-public-key endpoint
+      # working and lets you rotate without a rebuild if needed.
+      # VAPID_PRIVATE_KEY is runtime-only and is NEVER a build ARG.
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY}
+      VAPID_SUBJECT: ${VAPID_SUBJECT}
     ports:
       - "3005:3000"
     volumes:

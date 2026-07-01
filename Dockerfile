@@ -15,6 +15,10 @@ COPY node_modules ./node_modules
 FROM node:20-slim AS builder
 WORKDIR /app
 ENV NEXT_TELEMETRY_DISABLED=1
+# NEXT_PUBLIC_VAPID_PUBLIC_KEY is safe to bake into the client bundle — it is
+# intentionally public. VAPID_PRIVATE_KEY must NEVER appear here as an ARG or ENV.
+ARG NEXT_PUBLIC_VAPID_PUBLIC_KEY
+ENV NEXT_PUBLIC_VAPID_PUBLIC_KEY=${NEXT_PUBLIC_VAPID_PUBLIC_KEY}
 RUN apt-get update && apt-get install -y --no-install-recommends openssl \
   && rm -rf /var/lib/apt/lists/*
 COPY --from=deps /app/node_modules ./node_modules

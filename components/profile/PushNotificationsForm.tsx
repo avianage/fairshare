@@ -41,12 +41,15 @@ export function PushNotificationsForm() {
         return
       }
       const reg = await navigator.serviceWorker.ready
-      const keyRes = await fetch("/api/notifications/vapid-public-key")
-      if (!keyRes.ok) { toast.error("Push notifications are not available right now."); return }
-      const { publicKey } = await keyRes.json()
+      let publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+      if (!publicKey) {
+        const keyRes = await fetch("/api/notifications/vapid-public-key")
+        if (!keyRes.ok) { toast.error("Push notifications are not available right now."); return }
+        publicKey = (await keyRes.json()).publicKey
+      }
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(publicKey).buffer as ArrayBuffer,
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
       })
       const json = sub.toJSON()
       await fetch("/api/notifications/subscribe", {

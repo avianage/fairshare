@@ -58,17 +58,20 @@ export function PushSubscriber() {
           return
         }
 
-        const keyRes = await fetch("/api/notifications/vapid-public-key")
-        if (!keyRes.ok) {
-          toast.error("Push notifications not available.")
-          setBusy(false)
-          return
+        let publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+        if (!publicKey) {
+          const keyRes = await fetch("/api/notifications/vapid-public-key")
+          if (!keyRes.ok) {
+            toast.error("Push notifications not available.")
+            setBusy(false)
+            return
+          }
+          publicKey = (await keyRes.json()).publicKey
         }
-        const { publicKey } = await keyRes.json()
 
         const sub = await reg.pushManager.subscribe({
           userVisibleOnly: true,
-          applicationServerKey: urlBase64ToUint8Array(publicKey).buffer as ArrayBuffer,
+          applicationServerKey: urlBase64ToUint8Array(publicKey),
         })
 
         const json = sub.toJSON()
