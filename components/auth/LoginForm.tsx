@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
-import { signIn } from "next-auth/react"
+import { getCsrfToken } from "next-auth/react"
 import Link from "next/link"
-import { Eye, EyeOff, ArrowLeft } from "lucide-react"
+import { Eye, EyeOff, ArrowLeft, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -19,6 +19,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { useCountdown, formatCountdown } from "@/lib/useCountdown"
 
 const loginSchema = z.object({
   identifier: z.string().min(1, "Email or username is required"),
@@ -32,6 +33,9 @@ export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
   const [authError, setAuthError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [rateLimitSeconds, setRateLimitSeconds] = useState<number | null>(null)
+  const secondsLeft = useCountdown(rateLimitSeconds)
+  const rateLimited = !!secondsLeft && secondsLeft > 0
 
   const {
     register,
@@ -43,13 +47,32 @@ export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
     setIsLoading(true)
     setAuthError(null)
 
-    const result = await signIn("credentials", {
-      identifier: data.identifier,
-      password: data.password,
-      redirect: false,
+    // NextAuth's own `signIn()` helper assumes every response is shaped like
+    // its own callback response and crashes (`new URL(undefined)`) on our
+    // proxy's 429 JSON body, so the credentials callback is posted to
+    // manually here to read the raw status/Retry-After instead.
+    const csrfToken = await getCsrfToken()
+    const res = await fetch("/api/auth/callback/credentials", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        identifier: data.identifier,
+        password: data.password,
+        csrfToken: csrfToken ?? "",
+        callbackUrl,
+      }),
     })
 
-    if (result?.error) {
+    if (res.status === 429) {
+      const body = await res.json().catch(() => ({}))
+      setRateLimitSeconds(typeof body.retryAfter === "number" ? body.retryAfter : 60)
+      setIsLoading(false)
+      return
+    }
+
+    const resData: { url?: string } = await res.json().catch(() => ({}))
+    const errorParam = resData.url ? new URL(resData.url).searchParams.get("error") : "1"
+    if (!res.ok || errorParam) {
       // Generic message — never reveal which field was wrong
       setAuthError("Invalid email or password")
       setIsLoading(false)
@@ -75,10 +98,22 @@ export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
 
       <form onSubmit={handleSubmit(onSubmit)}>
         <CardContent className="space-y-4">
-          {authError && (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
-              {authError}
+          {rateLimited ? (
+            <div className="flex items-start gap-2.5 rounded-md border border-warning/30 bg-warning/10 px-3 py-2.5 text-sm text-warning-foreground">
+              <Clock className="h-4 w-4 shrink-0 translate-y-0.5" />
+              <span>
+                Too many sign-in attempts. Please try again in{" "}
+                <span className="font-mono font-semibold tabular-nums">
+                  {formatCountdown(secondsLeft)}
+                </span>.
+              </span>
             </div>
+          ) : (
+            authError && (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
+                {authError}
+              </div>
+            )
           )}
 
           <div className="space-y-1.5">
@@ -125,8 +160,12 @@ export function LoginForm({ callbackUrl }: { callbackUrl: string }) {
         </CardContent>
 
         <CardFooter className="flex flex-col gap-4 pb-6">
-          <Button type="submit" className="w-full font-semibold transition-all hover:bg-primary/95 hover:shadow-md" disabled={isLoading}>
-            {isLoading ? "Signing in…" : "Sign in"}
+          <Button type="submit" className="w-full font-semibold transition-all hover:bg-primary/95 hover:shadow-md" disabled={isLoading || rateLimited}>
+            {rateLimited
+              ? `Try again in ${formatCountdown(secondsLeft)}`
+              : isLoading
+                ? "Signing in…"
+                : "Sign in"}
           </Button>
           <p className="text-sm text-muted-foreground text-center">
             Don&apos;t have an account?{" "}

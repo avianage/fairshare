@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { signIn } from "next-auth/react"
 import Link from "next/link"
-import { Eye, EyeOff, ArrowLeft } from "lucide-react"
+import { Eye, EyeOff, ArrowLeft, Clock } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -19,6 +19,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import { useCountdown, formatCountdown } from "@/lib/useCountdown"
 
 const registerSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
@@ -93,6 +94,9 @@ export function RegisterForm({
   const [serverError, setServerError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const [rateLimitSeconds, setRateLimitSeconds] = useState<number | null>(null)
+  const secondsLeft = useCountdown(rateLimitSeconds)
+  const rateLimited = !!secondsLeft && secondsLeft > 0
 
   const {
     register,
@@ -113,6 +117,13 @@ export function RegisterForm({
       body: JSON.stringify(data),
     })
 
+    if (res.status === 429) {
+      const body = await res.json().catch(() => ({}))
+      setRateLimitSeconds(typeof body.retryAfter === "number" ? body.retryAfter : 60)
+      setIsLoading(false)
+      return
+    }
+
     if (!res.ok) {
       const body = await res.json().catch(() => ({}))
       setServerError(body.error ?? "Registration failed. Please try again.")
@@ -120,16 +131,23 @@ export function RegisterForm({
       return
     }
 
-    // Auto sign-in after successful registration
-    const signInResult = await signIn("credentials", {
-      identifier: data.email,
-      password: data.password,
-      redirect: false,
-    })
+    // Auto sign-in after successful registration. Wrapped in try/catch because
+    // NextAuth's `signIn()` throws (`new URL(undefined)`) if this also happens
+    // to get rate-limited — treat that the same as any other sign-in failure.
+    try {
+      const signInResult = await signIn("credentials", {
+        identifier: data.email,
+        password: data.password,
+        redirect: false,
+      })
 
-    if (signInResult?.error) {
-      // Account created but sign-in failed — send them to login, preserving
-      // where they were headed (e.g. an invite link).
+      if (signInResult?.error) {
+        // Account created but sign-in failed — send them to login, preserving
+        // where they were headed (e.g. an invite link).
+        router.push(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`)
+        return
+      }
+    } catch {
       router.push(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`)
       return
     }
@@ -153,10 +171,22 @@ export function RegisterForm({
 
       <form onSubmit={handleSubmit(onSubmit)}>
         <CardContent className="space-y-4">
-          {serverError && (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
-              {serverError}
+          {rateLimited ? (
+            <div className="flex items-start gap-2.5 rounded-md border border-warning/30 bg-warning/10 px-3 py-2.5 text-sm text-warning-foreground">
+              <Clock className="h-4 w-4 shrink-0 translate-y-0.5" />
+              <span>
+                Too many attempts. Please try again in{" "}
+                <span className="font-mono font-semibold tabular-nums">
+                  {formatCountdown(secondsLeft)}
+                </span>.
+              </span>
             </div>
+          ) : (
+            serverError && (
+              <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive">
+                {serverError}
+              </div>
+            )
           )}
 
           <div className="space-y-1.5">
@@ -241,8 +271,12 @@ export function RegisterForm({
         </CardContent>
 
         <CardFooter className="flex flex-col gap-4 pb-6">
-          <Button type="submit" className="w-full font-semibold transition-all hover:bg-primary/95 hover:shadow-md" disabled={isLoading}>
-            {isLoading ? "Creating account…" : "Create account"}
+          <Button type="submit" className="w-full font-semibold transition-all hover:bg-primary/95 hover:shadow-md" disabled={isLoading || rateLimited}>
+            {rateLimited
+              ? `Try again in ${formatCountdown(secondsLeft)}`
+              : isLoading
+                ? "Creating account…"
+                : "Create account"}
           </Button>
           <p className="text-sm text-muted-foreground text-center">
             Already have an account?{" "}
