@@ -38,7 +38,15 @@ const nextConfig = {
   // 30-second stale snapshot. Without this, revalidatePath from Route Handlers
   // has no effect on the in-memory router cache.
   experimental: {
-    staleTimes: { dynamic: 0 },
+    // A value of exactly 0 makes the client Router Cache entry for dynamic
+    // routes invalid the instant it's written. Combined with the persistent,
+    // always-on-screen nav links in AppNav.tsx, Next's background prefetch
+    // scheduler re-issues the prefetch as soon as it goes stale — with 0 that's
+    // immediate, causing a runaway prefetch loop (visible in dev as the target
+    // route being refetched roughly once per second). 30s still refreshes much
+    // more aggressively than the framework default (5 min) while avoiding the
+    // 0ms retrigger window.
+    staleTimes: { dynamic: 30 },
   },
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }]
@@ -50,8 +58,14 @@ const withPWA = require("@ducanh2912/next-pwa").default({
   customWorkerSrc: "worker",
   // PWA is now ON in dev too (so you can test install locally). The service
   // worker caches aggressively — if stale assets get annoying while coding, set
-  // DISABLE_PWA=true in your env to turn it back off for `next dev`.
-  disable: process.env.DISABLE_PWA === "true",
+  // NEXT_PUBLIC_DISABLE_PWA=true in your env to turn it back off for `next dev`.
+  // Must be NEXT_PUBLIC_ (not just server-side) because ServiceWorkerRegistrar
+  // (a client component) reads the same flag to actively unregister any
+  // leftover service worker + clear its caches — otherwise switching this flag
+  // off leaves a stale worker from a previous session still controlling the
+  // tab (this bit us: an old SW kept re-fetching pages in one browser profile
+  // after PWA had been disabled in every other one).
+  disable: process.env.NEXT_PUBLIC_DISABLE_PWA === "true",
   register: true,
   // Limit the service worker's control to the app origin.
   scope: "/",

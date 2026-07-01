@@ -228,7 +228,7 @@ Open <http://localhost:3000>.
 | `VAPID_PRIVATE_KEY` | – | Web Push VAPID private key |
 | `VAPID_SUBJECT` | – | VAPID contact email, e.g. `mailto:you@example.com` |
 | `APP_VERSION` | – | Surfaced by `/api/health` (e.g. a git SHA) |
-| `DISABLE_PWA` | – | Set `true` to disable the service worker in dev |
+| `NEXT_PUBLIC_DISABLE_PWA` | – | Set `true` to disable the service worker in dev (also unregisters any leftover worker/caches from a prior session) |
 | `POSTGRES_PASSWORD` | – | Used by `docker-compose.yml` for the bundled Postgres service |
 
 ---
