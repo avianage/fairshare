@@ -1,4 +1,5 @@
 import NextAuth from "next-auth"
+import type { JWT } from "next-auth/jwt"
 import Credentials from "next-auth/providers/credentials"
 import { z } from "zod"
 import bcrypt from "bcryptjs"
@@ -14,6 +15,38 @@ const credentialsSchema = z.object({
 export const { auth, handlers, signIn, signOut } = NextAuth({
   ...authConfig,
   secret: process.env.NEXTAUTH_SECRET,
+  callbacks: {
+    ...authConfig.callbacks,
+    async jwt({ token, user }) {
+      const t = token as JWT
+      if (user) {
+        t.id = user.id
+        t.isAdmin = (user as { isAdmin?: boolean }).isAdmin ?? false
+        t.isOwner = (user as { isOwner?: boolean }).isOwner ?? false
+        t.isBanned = (user as { isBanned?: boolean }).isBanned ?? false
+        t.refreshedAt = Date.now()
+        return t
+      }
+
+      // Re-sync role/ban flags from the DB periodically so admin promotions,
+      // demotions, and bans — all done out-of-band by someone else — take
+      // effect without forcing the affected user to log out and back in.
+      const REFRESH_INTERVAL_MS = 60_000
+      if (t.id && Date.now() - (t.refreshedAt ?? 0) > REFRESH_INTERVAL_MS) {
+        const dbUser = await prisma.user.findUnique({
+          where: { id: t.id },
+          select: { isAdmin: true, isOwner: true, isBanned: true },
+        })
+        if (dbUser) {
+          t.isAdmin = dbUser.isAdmin
+          t.isOwner = dbUser.isOwner
+          t.isBanned = dbUser.isBanned
+        }
+        t.refreshedAt = Date.now()
+      }
+      return t
+    },
+  },
   providers: [
     Credentials({
       credentials: {

@@ -17,5 +17,7 @@ declare module "next-auth/jwt" {
     isAdmin?: boolean
     isOwner?: boolean
     isBanned?: boolean
+    /** Epoch ms this token's role/ban flags were last re-synced from the DB. */
+    refreshedAt?: number
   }
 }
