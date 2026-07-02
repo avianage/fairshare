@@ -47,6 +47,7 @@ export function PushNotificationsForm() {
         if (!keyRes.ok) { toast.error("Push notifications are not available right now."); return }
         publicKey = (await keyRes.json()).publicKey
       }
+      if (!publicKey) { toast.error("Push notifications are not available right now."); return }
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(publicKey),
